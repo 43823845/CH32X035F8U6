@@ -28,21 +28,43 @@ void SPI1_Driver_Init(void)
     SPI_Cmd(SPI1, ENABLE);
 }
 
+#define SPI_TIMEOUT_COUNT   ((uint32_t)0x0000FFFF)
+
 void SPI1_WriteByte(uint8_t byte)
 {
-    /* 等待发送缓冲区空 */
-    while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE) == RESET);
+    uint32_t timeout = SPI_TIMEOUT_COUNT;
+    /* 等待发送缓冲区空 (带硬件超时保护，杜绝异常死锁) */
+    while ((SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE) == RESET) && timeout)
+    {
+        timeout--;
+    }
     SPI_I2S_SendData(SPI1, byte);
-    /* 等待发送完成 */
-    while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_BSY) == SET);
+
+    timeout = SPI_TIMEOUT_COUNT;
+    /* 等待发送完成 (带硬件超时保护，杜绝异常死锁) */
+    while ((SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_BSY) == SET) && timeout)
+    {
+        timeout--;
+    }
 }
 
 void SPI1_WriteBuffer(const uint8_t *buf, uint16_t len)
 {
+    if (!buf || len == 0) return;
+
     for (uint16_t i = 0; i < len; i++)
     {
-        while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE) == RESET);
+        uint32_t timeout = SPI_TIMEOUT_COUNT;
+        while ((SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE) == RESET) && timeout)
+        {
+            timeout--;
+        }
         SPI_I2S_SendData(SPI1, buf[i]);
     }
-    while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_BSY) == SET);
+
+    uint32_t timeout = SPI_TIMEOUT_COUNT;
+    while ((SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_BSY) == SET) && timeout)
+    {
+        timeout--;
+    }
 }

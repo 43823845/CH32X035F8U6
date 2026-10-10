@@ -48,14 +48,15 @@ bool LIS2DW12_ReadData(LIS2DW12_Data_t *data)
         return false;
     }
 
-    /* 组合 16-bit 有符号数 (14-bit 高性能数据左对齐，因此移位 2 位) */
-    int16_t x_raw = (int16_t)((buf[1] << 8) | buf[0]);
-    int16_t y_raw = (int16_t)((buf[2 + 1] << 8) | buf[2]);
-    int16_t z_raw = (int16_t)((buf[4 + 1] << 8) | buf[4]);
+    /* 组合 16-bit 补码数 (14-bit 高性能模式数据左对齐在 bits [15:2]) */
+    int16_t x_raw = (int16_t)(((uint16_t)buf[1] << 8) | (uint16_t)buf[0]);
+    int16_t y_raw = (int16_t)(((uint16_t)buf[3] << 8) | (uint16_t)buf[2]);
+    int16_t z_raw = (int16_t)(((uint16_t)buf[5] << 8) | (uint16_t)buf[4]);
 
-    data->raw_x = x_raw >> 2;
-    data->raw_y = y_raw >> 2;
-    data->raw_z = z_raw >> 2;
+    /* 标准有符号算术缩放为 14-bit 整数 (消除编译器实现定义行为差异) */
+    data->raw_x = x_raw / 4;
+    data->raw_y = y_raw / 4;
+    data->raw_z = z_raw / 4;
 
     /* 14-bit 灵敏度: ±2g 时 0.244 mg/LSB */
     data->x_mg = (float)data->raw_x * 0.244f;

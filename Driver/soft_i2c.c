@@ -53,16 +53,17 @@ static void Soft_I2C_Stop(void)
 
 static uint8_t Soft_I2C_WaitAck(void)
 {
-    uint8_t timeout = 0;
-    SDA_H(); /* 释放总线为输入 */
+    uint16_t timeout = 0;
+    SDA_H(); /* 释放总线为输入 (开漏高阻) */
     I2C_Delay();
     SCL_H();
     I2C_Delay();
 
     while (SDA_READ())
     {
+        I2C_Delay();
         timeout++;
-        if (timeout > 200)
+        if (timeout > 200) /* 约 400us 充裕超时保护窗口 */
         {
             Soft_I2C_Stop();
             return 1; /* NACK or timeout */
