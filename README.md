@@ -188,9 +188,9 @@ make all
 ### 5.2 资源占用情况 (RISC-V GCC rv32imacxw -Os)
 ```text
    text    data     bss     dec     hex filename
-  40752     328    7520   48600    bdd8 CH32X035F8U.elf
+  40968     328    7520   48816    beb0 CH32X035F8U.elf
 ```
-- **Flash (Text + Data)**：**41.08 KB** / 62 KB (占用率约 **66.2%**)
+- **Flash (Text + Data)**：**41.30 KB** / 62 KB (占用率约 **66.6%**)
 - **SRAM (Data + BSS)**：**7.66 KB** / 20 KB (占用率约 **38.3%**，包含 WCHGUI 3KB 独立运行堆区与 USB CDC 缓冲区)
 - 生成固件位于：
   - `obj/CH32X035F8U.elf`

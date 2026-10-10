@@ -33,7 +33,7 @@ void App_Sensor_Update(void)
         s_sensor_data.ltr308_online = LTR308_Init();
     }
 
-    /* 2. 更新加速度与姿态数据 */
+    /* 3. 更新加速度与姿态数据 */
     if (s_sensor_data.lis2dw12_online)
     {
         LIS2DW12_Data_t acc;

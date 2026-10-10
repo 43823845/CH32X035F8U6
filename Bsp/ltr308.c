@@ -35,14 +35,36 @@ bool LTR308_Init(void)
     I2C_WriteReg(LTR308_I2C_ADDR, LTR308_REG_INT_CFG, 0x04);
     I2C_WriteReg(LTR308_I2C_ADDR, LTR308_REG_INT_PST, 0x00);
 
+    /* 配置中断阈值: 上阈值设为 0，使每次光强采样完成均超出窗口触发 INT2 中断输出 */
+    LTR308_SetThreshold(0, 0);
+
     /* 启动测量 (ALS_EN = 1) */
     I2C_WriteReg(LTR308_I2C_ADDR, LTR308_REG_MAIN_CTRL, 0x02);
 
     return true;
 }
 
+bool LTR308_SetThreshold(uint32_t low_thresh, uint32_t high_thresh)
+{
+    /* 写入上阈值 (20-bit) */
+    I2C_WriteReg(LTR308_I2C_ADDR, LTR308_REG_THRES_UP_0, (uint8_t)(high_thresh & 0xFF));
+    I2C_WriteReg(LTR308_I2C_ADDR, LTR308_REG_THRES_UP_1, (uint8_t)((high_thresh >> 8) & 0xFF));
+    I2C_WriteReg(LTR308_I2C_ADDR, LTR308_REG_THRES_UP_2, (uint8_t)((high_thresh >> 16) & 0x0F));
+
+    /* 写入下阈值 (20-bit) */
+    I2C_WriteReg(LTR308_I2C_ADDR, LTR308_REG_THRES_LOW_0, (uint8_t)(low_thresh & 0xFF));
+    I2C_WriteReg(LTR308_I2C_ADDR, LTR308_REG_THRES_LOW_1, (uint8_t)((low_thresh >> 8) & 0xFF));
+    I2C_WriteReg(LTR308_I2C_ADDR, LTR308_REG_THRES_LOW_2, (uint8_t)((low_thresh >> 16) & 0x0F));
+
+    return true;
+}
+
 uint32_t LTR308_ReadRaw(void)
 {
+    uint8_t status = 0;
+    /* 读取主状态寄存器 (自动清除 ALS 中断引脚锁存状态) */
+    I2C_ReadReg(LTR308_I2C_ADDR, LTR308_REG_MAIN_STATUS, &status);
+
     uint8_t buf[3] = {0};
 
     /* 顺序读取 DATA_0, DATA_1, DATA_2 */

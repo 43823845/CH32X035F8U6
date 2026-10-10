@@ -17,6 +17,12 @@
 #define LTR308_REG_DATA_2       0x0F
 #define LTR308_REG_INT_CFG      0x19
 #define LTR308_REG_INT_PST      0x1A
+#define LTR308_REG_THRES_UP_0   0x21
+#define LTR308_REG_THRES_UP_1   0x22
+#define LTR308_REG_THRES_UP_2   0x23
+#define LTR308_REG_THRES_LOW_0  0x24
+#define LTR308_REG_THRES_LOW_1  0x25
+#define LTR308_REG_THRES_LOW_2  0x26
 
 /* 增益定义 */
 typedef enum {
@@ -28,6 +34,7 @@ typedef enum {
 } LTR308_Gain_t;
 
 bool LTR308_Init(void);
+bool LTR308_SetThreshold(uint32_t low_thresh, uint32_t high_thresh);
 uint32_t LTR308_ReadRaw(void);
 float LTR308_ReadLux(void);
 
