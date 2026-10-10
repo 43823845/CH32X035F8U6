@@ -1,0 +1,271 @@
+{
+  "name": "WCHGUIProject",
+  "screenWidth": 160,
+  "screenHeight": 80,
+  "screenCornerRadius": 0,
+  "flashStorageType": "external",
+  "flashSizeBytes": 4194304,
+  "pages": [
+    {
+      "name": "Page1",
+      "enumName": "WUI_PAGE_1",
+      "templateId": null,
+      "templateVersion": 0,
+      "templateDetached": false,
+      "backgroundColor": 16777215,
+      "components": [
+        {
+          "idName": "component_003",
+          "type": "label",
+          "x": 16,
+          "y": 6,
+          "w": 134,
+          "h": 24,
+          "text": "亮度&姿态测试仪 1.0",
+          "fontId": null,
+          "imageName": null,
+          "imageBindingType": "singleImage",
+          "imageCompressionType": "none",
+          "imageResourceId": null,
+          "imageSequenceId": null,
+          "imageSequenceFrameIndex": 0,
+          "colorValue": 4281303277,
+          "foregroundColorValue": 15684432,
+          "backgroundColorValue": 16777215,
+          "props": {
+            "align": "left",
+            "supportsTouch": false
+          }
+        },
+        {
+          "idName": "component_002",
+          "type": "image",
+          "x": 9,
+          "y": 30,
+          "w": 50,
+          "h": 50,
+          "text": null,
+          "fontId": null,
+          "imageName": null,
+          "imageBindingType": "singleImage",
+          "imageCompressionType": "rle",
+          "imageResourceId": "img_2025_12_24_212900_445",
+          "imageSequenceId": null,
+          "imageSequenceFrameIndex": 0,
+          "colorValue": 4287669422,
+          "foregroundColorValue": 16777215,
+          "backgroundColorValue": 0,
+          "props": {
+            "supportsTouch": false
+          }
+        },
+        {
+          "idName": "component_001",
+          "type": "staticText",
+          "x": 64,
+          "y": 44,
+          "w": 77,
+          "h": 28,
+          "text": "Origin",
+          "fontId": null,
+          "imageName": null,
+          "imageBindingType": "singleImage",
+          "imageCompressionType": "none",
+          "imageResourceId": null,
+          "imageSequenceId": null,
+          "imageSequenceFrameIndex": 0,
+          "colorValue": 4294967295,
+          "foregroundColorValue": 16777215,
+          "backgroundColorValue": 0,
+          "props": {
+            "fontFamily": "Microsoft YaHei",
+            "fontSize": 16,
+            "textColor": 15684432,
+            "bold": false,
+            "italic": false,
+            "textX": 0,
+            "textY": 0,
+            "backgroundTransparent": false,
+            "backgroundUseImage": false,
+            "backgroundColor": 16777215,
+            "backgroundImageResourceId": null,
+            "supportsTouch": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "Page2",
+      "enumName": "WUI_PAGE_2",
+      "templateId": null,
+      "templateVersion": 0,
+      "templateDetached": false,
+      "backgroundColor": 0,
+      "components": [
+        {
+          "idName": "component_006",
+          "type": "label",
+          "x": 87,
+          "y": 3,
+          "w": 37,
+          "h": 24,
+          "text": "亮度:",
+          "fontId": null,
+          "imageName": null,
+          "imageBindingType": "singleImage",
+          "imageCompressionType": "none",
+          "imageResourceId": null,
+          "imageSequenceId": null,
+          "imageSequenceFrameIndex": 0,
+          "colorValue": 4281303277,
+          "foregroundColorValue": 8505220,
+          "backgroundColorValue": 0,
+          "props": {
+            "align": "left",
+            "supportsTouch": false
+          }
+        },
+        {
+          "idName": "component_005",
+          "type": "label",
+          "x": 107,
+          "y": 56,
+          "w": 37,
+          "h": 24,
+          "text": "Z:",
+          "fontId": null,
+          "imageName": null,
+          "imageBindingType": "singleImage",
+          "imageCompressionType": "none",
+          "imageResourceId": null,
+          "imageSequenceId": null,
+          "imageSequenceFrameIndex": 0,
+          "colorValue": 4281303277,
+          "foregroundColorValue": 16758605,
+          "backgroundColorValue": 0,
+          "props": {
+            "align": "left",
+            "supportsTouch": false
+          }
+        },
+        {
+          "idName": "component_004",
+          "type": "label",
+          "x": 57,
+          "y": 56,
+          "w": 37,
+          "h": 24,
+          "text": "Y:",
+          "fontId": null,
+          "imageName": null,
+          "imageBindingType": "singleImage",
+          "imageCompressionType": "none",
+          "imageResourceId": null,
+          "imageSequenceId": null,
+          "imageSequenceFrameIndex": 0,
+          "colorValue": 4281303277,
+          "foregroundColorValue": 16758605,
+          "backgroundColorValue": 0,
+          "props": {
+            "align": "left",
+            "supportsTouch": false
+          }
+        },
+        {
+          "idName": "component_003",
+          "type": "label",
+          "x": 7,
+          "y": 56,
+          "w": 37,
+          "h": 24,
+          "text": "X:",
+          "fontId": null,
+          "imageName": null,
+          "imageBindingType": "singleImage",
+          "imageCompressionType": "none",
+          "imageResourceId": null,
+          "imageSequenceId": null,
+          "imageSequenceFrameIndex": 0,
+          "colorValue": 4281303277,
+          "foregroundColorValue": 16758605,
+          "backgroundColorValue": 0,
+          "props": {
+            "align": "left",
+            "supportsTouch": false
+          }
+        },
+        {
+          "idName": "component_002",
+          "type": "label",
+          "x": 7,
+          "y": 29,
+          "w": 37,
+          "h": 24,
+          "text": "姿态:",
+          "fontId": null,
+          "imageName": null,
+          "imageBindingType": "singleImage",
+          "imageCompressionType": "none",
+          "imageResourceId": null,
+          "imageSequenceId": null,
+          "imageSequenceFrameIndex": 0,
+          "colorValue": 4281303277,
+          "foregroundColorValue": 8505220,
+          "backgroundColorValue": 0,
+          "props": {
+            "align": "left",
+            "supportsTouch": false
+          }
+        },
+        {
+          "idName": "component_001",
+          "type": "label",
+          "x": 7,
+          "y": 3,
+          "w": 37,
+          "h": 24,
+          "text": "光强:",
+          "fontId": null,
+          "imageName": null,
+          "imageBindingType": "singleImage",
+          "imageCompressionType": "none",
+          "imageResourceId": null,
+          "imageSequenceId": null,
+          "imageSequenceFrameIndex": 0,
+          "colorValue": 4281303277,
+          "foregroundColorValue": 8505220,
+          "backgroundColorValue": 0,
+          "props": {
+            "align": "left",
+            "supportsTouch": false
+          }
+        }
+      ]
+    }
+  ],
+  "images": [
+    {
+      "id": "img_2025_12_24_212900_445",
+      "name": "微信图片_2025-12-24_212900_445 - 副本.jpg",
+      "enumName": "IMAGE_IMG_2025_12_24_212900_445",
+      "sourcePath": "assets/images/微信图片_2025-12-24_212900_445 - 副本.jpg",
+      "filterId": null,
+      "width": 50,
+      "height": 50,
+      "flashAddr": 0,
+      "dataSize": 1696,
+      "format": "RGB565"
+    }
+  ],
+  "resourceFilters": [],
+  "imageSequences": [],
+  "workspaceState": {
+    "currentPageId": "WUI_PAGE_2",
+    "selectedComponentId": null,
+    "selectedComponentIds": [],
+    "zoom": 3.0,
+    "offsetX": 0.0,
+    "offsetY": 0.0,
+    "lastOpenedAt": null
+  }
+}

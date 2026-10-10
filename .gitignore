@@ -1,0 +1,11 @@
+# MounRiver Studio build output
+obj/
+
+# Local IDE workspace state / snapshots
+.mrs/
+
+# OS / Editor temporary files
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
