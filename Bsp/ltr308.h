@@ -15,6 +15,8 @@
 #define LTR308_REG_DATA_0       0x0D
 #define LTR308_REG_DATA_1       0x0E
 #define LTR308_REG_DATA_2       0x0F
+#define LTR308_REG_INT_CFG      0x19
+#define LTR308_REG_INT_PST      0x1A
 
 /* 增益定义 */
 typedef enum {

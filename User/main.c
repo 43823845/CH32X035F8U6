@@ -9,6 +9,7 @@
 #include "bsp_led.h"
 #include "bsp_key.h"
 #include "bsp_backlight.h"
+#include "bsp_int.h"
 #include "st7735.h"
 #include "usb_cdc.h"
 #include "app_sensor.h"
@@ -47,6 +48,7 @@ int main(void)
 
     /* 1. 底层通信与硬件外设初始化 */
     Soft_I2C_Init();
+    Bsp_Int_Init();
     LED_Init();
     Key_Init();
     Backlight_Init();
@@ -54,7 +56,7 @@ int main(void)
     USB_CDC_Init();
 
     printf("\r\n========================================\r\n");
-    printf("  CH32X035 Sensor Monitor (USB CDC Ready) \r\n");
+    printf("  CH32X035 Sensor Monitor (INT1/2 Ready)  \r\n");
     printf("========================================\r\n");
 
     /* 2. 初始化 WCHGUI 框架并显示 Page1 (初始化欢迎页) */
@@ -122,10 +124,12 @@ int main(void)
             /* 每 500ms 向上位机串口助手输出一次结构化调试信息 */
             if (tick_count % 50 == 0)
             {
-                printf("[DEBUG] Lux:%6.1f | P:%3.0f R:%3.0f | X:%4.0f Y:%4.0f Z:%4.0f | BL:%3d%%\r\n",
+                printf("[DEBUG] Lux:%6.1f | P:%3.0f R:%3.0f | X:%4.0f Y:%4.0f Z:%4.0f | BL:%3d%% | INT1:%lu INT2:%lu\r\n",
                        data->lux, data->pitch, data->roll,
                        data->acc_x, data->acc_y, data->acc_z,
-                       Backlight_GetBrightness());
+                       Backlight_GetBrightness(),
+                       (unsigned long)data->int1_count,
+                       (unsigned long)data->int2_count);
             }
         }
 

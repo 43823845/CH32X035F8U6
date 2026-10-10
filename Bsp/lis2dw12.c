@@ -21,6 +21,12 @@ bool LIS2DW12_Init(void)
     /* CTRL2: 开启 BDU (Block Data Update) 和 IF_ADD_INC (自动地址递增) */
     I2C_WriteReg(LIS2DW12_I2C_ADDR, LIS2DW12_REG_CTRL2, 0x0C);
 
+    /* CTRL3: 开漏输出 (PP_OD=1), 低电平有效 (H_LACTIVE=1) -> 0x0A (配合硬件 10k 上拉) */
+    I2C_WriteReg(LIS2DW12_I2C_ADDR, LIS2DW12_REG_CTRL3, 0x0A);
+
+    /* CTRL4_INT1: 使能 INT1 引脚上的数据就绪中断 (DRDY) -> 0x01 */
+    I2C_WriteReg(LIS2DW12_I2C_ADDR, LIS2DW12_REG_CTRL4_INT1, 0x01);
+
     /* CTRL6: 满量程 ±2g (FS=00, 高性能模式下灵敏度 0.244 mg/LSB) */
     I2C_WriteReg(LIS2DW12_I2C_ADDR, LIS2DW12_REG_CTRL6, 0x00);
 

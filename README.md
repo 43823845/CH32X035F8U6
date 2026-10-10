@@ -43,11 +43,12 @@ CH32X035F8U/
 │   ├── soft_i2c.h / soft_i2c.c                 # 模拟 I2C 驱动 (PB0-SDA, PB1-SCL)，标准开漏时序
 │   └── spi_driver.h / spi_driver.c             # 硬件 SPI1 驱动 (PA5-SCK, PA7-MOSI)，36MHz 高速传输
 ├── Bsp/                                        # 板级支持包与器件驱动层 (零 UI 残留)
+│   ├── bsp_int.h / bsp_int.c                   # 外部中断检测 (PA0-INT1 LIS2DW12, PA1-INT2 LTR308, EXTI7_0)
 │   ├── bsp_led.h / bsp_led.c                   # LED1 运行指示灯 (PB12，心跳控制)
 │   ├── bsp_key.h / bsp_key.c                   # 用户按键 SW2 (PA2，非阻塞消抖与长短按识别)
 │   ├── bsp_backlight.h / .c                    # 背光驱动 (PA3，TIM2_CH4 PWM 调光与开关)
-│   ├── ltr308.h / ltr308.c                     # LTR-308ALS-01 环境光照度传感器驱动 (I2C: 0x53)
-│   ├── lis2dw12.h / lis2dw12.c                 # LIS2DW12TR 三轴加速度传感器驱动 (I2C: 0x19)
+│   ├── ltr308.h / ltr308.c                     # LTR-308ALS-01 环境光照度传感器驱动 (I2C: 0x53, INT2 使能)
+│   ├── lis2dw12.h / lis2dw12.c                 # LIS2DW12TR 三轴加速度传感器驱动 (I2C: 0x19, INT1 DRDY 使能)
 │   └── st7735.h / st7735.c                     # 0.96寸 ST7735S 底层驱动 (80x160 偏移校准与窗口绘制)
 ├── App/                                        # 业务逻辑与算法层
 │   └── app_sensor.h / app_sensor.c             # 传感器数据融合采样与俯仰/横滚姿态角解算

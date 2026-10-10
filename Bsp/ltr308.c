@@ -31,6 +31,10 @@ bool LTR308_Init(void)
     /* 设置测量速率: 100ms 积分时间, 100ms 重复率 (0x22) */
     I2C_WriteReg(LTR308_I2C_ADDR, LTR308_REG_MEAS_RATE, 0x22);
 
+    /* 使能中断输出: INT_EN=1, INT_POL=0 (Active Low 开漏低有效) -> 0x04 (配合硬件 10k 上拉) */
+    I2C_WriteReg(LTR308_I2C_ADDR, LTR308_REG_INT_CFG, 0x04);
+    I2C_WriteReg(LTR308_I2C_ADDR, LTR308_REG_INT_PST, 0x00);
+
     /* 启动测量 (ALS_EN = 1) */
     I2C_WriteReg(LTR308_I2C_ADDR, LTR308_REG_MAIN_CTRL, 0x02);
 

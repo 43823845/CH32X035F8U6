@@ -1,6 +1,7 @@
 #include "app_sensor.h"
 #include "ltr308.h"
 #include "lis2dw12.h"
+#include "bsp_int.h"
 #include <math.h>
 
 #define RAD_TO_DEG (180.0f / 3.14159265f)
@@ -15,7 +16,13 @@ void App_Sensor_Init(void)
 
 void App_Sensor_Update(void)
 {
-    /* 1. 更新环境光数据 */
+    /* 1. 同步 INT1 与 INT2 中断指标 */
+    s_sensor_data.int1_count  = Bsp_Int_GetInt1Count();
+    s_sensor_data.int2_count  = Bsp_Int_GetInt2Count();
+    s_sensor_data.int1_active = Bsp_Int_GetInt1Flag();
+    s_sensor_data.int2_active = Bsp_Int_GetInt2Flag();
+
+    /* 2. 更新环境光数据 */
     if (s_sensor_data.ltr308_online)
     {
         s_sensor_data.lux = LTR308_ReadLux();
