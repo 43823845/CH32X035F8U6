@@ -144,12 +144,41 @@ void wui_page_page_2_update_data(float lux, float pitch, float roll, float ax, f
    - 固件自动将 USBFS 外设初始化为 **USB CDC-ACM 设备**（全速 12Mbps），Windows 10/11 系统免驱自动枚举为 `USB 串行设备 (COMx)`；
    - 底层 `printf` 已重定向至 USB CDC 环形发送队列，打开串口助手（115200 8N1）即可实时接收传感器结构化调试日志；
    - **非阻塞无感设计**：未插电脑或串口未打开时，发送函数直接非阻塞跳过，不影响屏幕刷新与系统流畅度。
+   - **调试日志输出格式示例**：
+     ```text
+     [DEBUG] Lux: 850.0 | P:  0 R:  0 | X:   0 Y:   0 Z: 980 | BL:100% | INT1:52 INT2:5
+     ```
+
+### 4.6 外部硬件中断监控：INT1 与 INT2
+针对板载两路硬件传感器中断引脚，实现了全流程闭环事件检测：
+- **PA0 (INT1 - LIS2DW12TR)**：
+  - 加速度计配置为开漏输出 (`PP_OD=1`)、低电平有效 (`H_LACTIVE=1`)，启用 `CTRL4_INT1_PAD_CTRL` 中的数据就绪中断 (`DRDY`)；
+  - 芯片每完成一次采样（100Hz ODR），INT1 产生低电平脉冲，由 MCU 侧 `EXTI_Line0` 下降沿中断捕获并累加触发计数器。
+- **PA1 (INT2 - LTR-308ALS-01)**：
+  - 环境光传感器配置为开漏输出、低电平有效 (`INT_POL=0`)，启用 `INT_CFG` 中的 ALS 测量中断；
+  - 传感器完成光强积分转换后拉低引脚，由 MCU 侧 `EXTI_Line1` 下降沿中断捕获并累加计数器。
+- **中断控制器 (PFIC)**：
+  - 统一映射至青稞 RISC-V 快速中断通道 `EXTI7_0_IRQn`（抢占 1，子优先级 1），保证微秒级低延迟响应；
+  - 提供 `Bsp_Int_GetInt1Count()`、`Bsp_Int_GetInt2Count()`、`Bsp_Int_GetInt1Flag()` 等统一数据接口供业务层查询。
+
+### 4.7 系统鲁棒性与异常防护设计 (Industrial-Grade Robustness)
+- **软件 I2C 总线原子操作与防死锁**：SCL/SDA 引脚采用直接寄存器位带原子置位，`Soft_I2C_WaitAck()` 内置微秒延时与 400µs 宽容限超时保护，杜绝从机掉线或总线干扰导致的无限等待；
+- **SPI 传输故障安全保护 (Failsafe)**：所有硬件 SPI 标志位（`TXE`、`BSY`）等待循环均加入 `SPI_TIMEOUT_COUNT` 边界计数器，防止因时钟异常造成单片机硬卡死；
+- **USB CDC 临界区并发保护**：主线程 `SendBuffer` 与 USB 中断例程 `USBFS_IRQHandler` 操作环形缓冲区时，采用 `NVIC_DisableIRQ(USBFS_IRQn)` 临界区原子锁定，彻底杜绝数据乱序与重入冲突；
+- **USB 多包控制传输状态机**：支持完整的控制读取分包机制，彻底消除 Windows 获取 67 字节 CDC 配置描述符时的截断缺陷（解决设备管理器代码 10 无法启动故障）。
 
 ---
 
-## 5. 编译与固件产物
+## 5. 编译、烧录与资源占用
 
-### 5.1 命令行编译
+### 5.1 编译方式
+
+#### 方式一：MounRiver Studio Ⅱ IDE 构建
+1. 打开 MounRiver Studio Ⅱ，选择 `File -> Import -> General -> Existing Projects into Workspace`；
+2. 浏览并选中本项目工程目录 `CH32X035F8U` 导入；
+3. 点击工具栏 **Build** 按钮（或快捷键 `Ctrl + B`）即可自动一键编译。
+
+#### 方式二：命令行编译
 已配置标准 GCC 与 Make 构建系统，可直接在 `obj/` 目录执行：
 ```powershell
 make clean
@@ -159,10 +188,25 @@ make all
 ### 5.2 资源占用情况 (RISC-V GCC rv32imacxw -Os)
 ```text
    text    data     bss     dec     hex filename
-  39848     328    7484   47660    ba2c CH32X035F8U.elf
+  40752     328    7520   48600    bdd8 CH32X035F8U.elf
 ```
-- **Flash (Text + Data)**：**40.17 KB** / 62 KB (占用率约 **64.7%**)
-- **SRAM (Data + BSS)**：**7.81 KB** / 20 KB (占用率约 **39.0%**，包含 WCHGUI 3KB 独立运行堆区与 USB CDC 缓冲区)
+- **Flash (Text + Data)**：**41.08 KB** / 62 KB (占用率约 **66.2%**)
+- **SRAM (Data + BSS)**：**7.66 KB** / 20 KB (占用率约 **38.3%**，包含 WCHGUI 3KB 独立运行堆区与 USB CDC 缓冲区)
 - 生成固件位于：
   - `obj/CH32X035F8U.elf`
   - `obj/CH32X035F8U.hex`
+
+### 5.3 固件烧录指南
+
+#### 免调试器烧录 (Type-C USB ISP 模式)
+1. 准备一根 Type-C 数据线连接至电脑；
+2. **按住板载 SW1 按键不放**，将 Type-C 线插入开发板（或按住 SW1 时按下 Reset）；
+3. 打开官方烧录工具 **WCHISPTool**；
+4. 芯片系列选择 **CH32X035**，下载方式选择 **USB**，软件将自动识别出芯片；
+5. 在“用户程序文件”中载入 `obj/CH32X035F8U.hex`；
+6. 点击 **“下载”**，烧录完成后松开 SW1 重新上电，屏幕即刻点亮并运行！
+
+#### WCH-Link 仿真器烧录 (SWD 模式)
+1. 将 WCH-Link 模块的 SWDIO、SWCLK、GND、3V3 分别连接至板载对应的测试点或 Type-C 引脚；
+2. 在 MounRiver Studio Ⅱ 中点击工具栏 **Download** 按钮直接烧录并支持单步硬件仿真。
+
