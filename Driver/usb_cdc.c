@@ -21,10 +21,12 @@ static uint8_t s_line_coding[7] = {
 };
 
 /* 状态变量 */
-static volatile bool     s_is_configured = false;
-static volatile bool     s_ep3_tx_busy   = false;
-static volatile uint8_t  s_dev_addr      = 0;
-static volatile uint8_t  s_setup_req     = 0;
+static volatile bool     s_is_configured  = false;
+static volatile bool     s_ep3_tx_busy    = false;
+static volatile uint8_t  s_dev_addr       = 0;
+static volatile uint8_t  s_setup_req      = 0;
+static const uint8_t    *s_ep0_pdata      = NULL;
+static volatile uint16_t s_ep0_remain_len = 0;
 
 /* 端点 DMA 缓冲区 (4字节对齐) */
 __attribute__((aligned(4))) static uint8_t s_ep0_buf[CDC_MAX_PACKET_SIZE];
@@ -126,9 +128,15 @@ static void USBFS_Device_Reset(void)
     USBFSD->UEP2_CTRL_H = USBFS_UEP_R_RES_ACK | USBFS_UEP_R_AUTO_TOG;
     USBFSD->UEP3_CTRL_H = USBFS_UEP_T_RES_NAK | USBFS_UEP_T_AUTO_TOG;
 
-    s_is_configured = false;
-    s_ep3_tx_busy   = false;
-    s_dev_addr      = 0;
+    s_is_configured  = false;
+    s_ep3_tx_busy    = false;
+    s_dev_addr       = 0;
+    s_ep0_pdata      = NULL;
+    s_ep0_remain_len = 0;
+    s_tx_head        = 0;
+    s_tx_tail        = 0;
+    s_rx_head        = 0;
+    s_rx_tail        = 0;
 }
 
 void USB_CDC_Init(void)
@@ -197,6 +205,8 @@ uint32_t USB_CDC_SendBuffer(const uint8_t *buf, uint32_t len)
 {
     if (!buf || len == 0) return 0;
 
+    NVIC_DisableIRQ(USBFS_IRQn);
+
     uint32_t written = 0;
     for (uint32_t i = 0; i < len; i++)
     {
@@ -213,6 +223,8 @@ uint32_t USB_CDC_SendBuffer(const uint8_t *buf, uint32_t len)
     }
 
     USB_CDC_TriggerTx();
+
+    NVIC_EnableIRQ(USBFS_IRQn);
     return written;
 }
 
@@ -241,7 +253,9 @@ int16_t USB_CDC_ReadByte(void)
 
 void USB_CDC_Poll(void)
 {
+    NVIC_DisableIRQ(USBFS_IRQn);
     USB_CDC_TriggerTx();
+    NVIC_EnableIRQ(USBFS_IRQn);
 }
 
 /* ================== USBFS 中断服务例程 ================== */
@@ -327,6 +341,10 @@ void USBFS_IRQHandler(void)
 
                             case USB_SET_CONFIGURATION:
                                 s_is_configured = (req->wValue != 0);
+                                USBFSD->UEP1_CTRL_H = USBFS_UEP_T_RES_NAK | USBFS_UEP_T_AUTO_TOG;
+                                USBFSD->UEP2_CTRL_H = USBFS_UEP_R_RES_ACK | USBFS_UEP_R_AUTO_TOG;
+                                USBFSD->UEP3_CTRL_H = USBFS_UEP_T_RES_NAK | USBFS_UEP_T_AUTO_TOG;
+                                s_ep3_tx_busy = false;
                                 break;
 
                             case USB_GET_CONFIGURATION:
@@ -366,25 +384,47 @@ void USBFS_IRQHandler(void)
                     if (p_data != NULL)
                     {
                         if (tx_len > len) tx_len = len;
-                        if (tx_len > CDC_MAX_PACKET_SIZE) tx_len = CDC_MAX_PACKET_SIZE;
-                        memcpy(s_ep0_buf, p_data, tx_len);
-                        USBFSD->UEP0_TX_LEN = tx_len;
+                        uint16_t pack_len = tx_len;
+                        if (pack_len > CDC_MAX_PACKET_SIZE) pack_len = CDC_MAX_PACKET_SIZE;
+                        memcpy(s_ep0_buf, p_data, pack_len);
+                        s_ep0_pdata = p_data + pack_len;
+                        s_ep0_remain_len = tx_len - pack_len;
+
+                        USBFSD->UEP0_TX_LEN = pack_len;
                         USBFSD->UEP0_CTRL_H = USBFS_UEP_R_RES_ACK | USBFS_UEP_T_RES_ACK | USBFS_UEP_T_TOG;
                     }
                     else
                     {
+                        s_ep0_pdata = NULL;
+                        s_ep0_remain_len = 0;
                         USBFSD->UEP0_TX_LEN = 0;
                         USBFSD->UEP0_CTRL_H = USBFS_UEP_R_RES_ACK | USBFS_UEP_T_RES_ACK | USBFS_UEP_T_TOG;
                     }
                 }
                 else if (token == USBFS_UIS_TOKEN_IN)
                 {
-                    if (s_dev_addr != 0 && USBFSD->DEV_ADDR == 0)
+                    if (s_ep0_remain_len > 0)
                     {
-                        USBFSD->DEV_ADDR = s_dev_addr;
+                        /* 继续发送后续分包数据 (多包控制传输) */
+                        uint16_t pack_len = s_ep0_remain_len;
+                        if (pack_len > CDC_MAX_PACKET_SIZE) pack_len = CDC_MAX_PACKET_SIZE;
+                        memcpy(s_ep0_buf, s_ep0_pdata, pack_len);
+                        s_ep0_pdata += pack_len;
+                        s_ep0_remain_len -= pack_len;
+
+                        USBFSD->UEP0_TX_LEN = pack_len;
+                        USBFSD->UEP0_CTRL_H ^= USBFS_UEP_T_TOG;
+                        USBFSD->UEP0_CTRL_H = (USBFSD->UEP0_CTRL_H & ~USBFS_UEP_T_RES_MASK) | USBFS_UEP_T_RES_ACK;
                     }
-                    USBFSD->UEP0_TX_LEN = 0;
-                    USBFSD->UEP0_CTRL_H = USBFS_UEP_R_RES_ACK | USBFS_UEP_T_RES_NAK;
+                    else
+                    {
+                        if (s_dev_addr != 0 && USBFSD->DEV_ADDR == 0)
+                        {
+                            USBFSD->DEV_ADDR = s_dev_addr;
+                        }
+                        USBFSD->UEP0_TX_LEN = 0;
+                        USBFSD->UEP0_CTRL_H = USBFS_UEP_R_RES_ACK | USBFS_UEP_T_RES_NAK;
+                    }
                 }
                 else if (token == USBFS_UIS_TOKEN_OUT)
                 {

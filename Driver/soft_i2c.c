@@ -7,42 +7,23 @@ static inline void I2C_Delay(void)
     Delay_Us(2);
 }
 
-#define SCL_H()   GPIO_SetBits(I2C_GPIO_PORT, I2C_PIN_SCL)
-#define SCL_L()   GPIO_ResetBits(I2C_GPIO_PORT, I2C_PIN_SCL)
-#define SDA_READ() GPIO_ReadInputDataBit(I2C_GPIO_PORT, I2C_PIN_SDA)
+#define SCL_H()    do { GPIOB->BSHR = GPIO_Pin_1; } while(0)
+#define SCL_L()    do { GPIOB->BCR  = GPIO_Pin_1; } while(0)
 
-static inline void SDA_H(void)
-{
-    /* 释放总线为输入模式，外部 4.7K 电阻上拉为高电平 */
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
-    GPIO_InitStruct.GPIO_Pin = I2C_PIN_SDA;
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_Init(I2C_GPIO_PORT, &GPIO_InitStruct);
-}
+/* PB0 (SDA) 浮空输入模式 (释放总线，由外部 4.7K 电阻上拉为高) */
+#define SDA_H()    do { GPIOB->CFGLR = (GPIOB->CFGLR & ~0x0000000Fu) | 0x00000004u; } while(0)
 
-static inline void SDA_L(void)
-{
-    /* 推挽输出模式并拉低为 0 */
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
-    GPIO_InitStruct.GPIO_Pin = I2C_PIN_SDA;
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_Out_PP;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_Init(I2C_GPIO_PORT, &GPIO_InitStruct);
-    GPIO_ResetBits(I2C_GPIO_PORT, I2C_PIN_SDA);
-}
+/* PB0 (SDA) 推挽输出模式低电平 (先清零数据，再配置为输出) */
+#define SDA_L()    do { GPIOB->BCR = GPIO_Pin_0; GPIOB->CFGLR = (GPIOB->CFGLR & ~0x0000000Fu) | 0x00000003u; } while(0)
+
+#define SDA_READ() ((GPIOB->INDR & GPIO_Pin_0) ? 1 : 0)
 
 void Soft_I2C_Init(void)
 {
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
 
-    RCC_APB2PeriphClockCmd(I2C_RCC_PORT, ENABLE);
-
-    /* SCL 配置为推挽输出 */
-    GPIO_InitStruct.GPIO_Pin = I2C_PIN_SCL;
-    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_Out_PP;
-    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
-    GPIO_Init(I2C_GPIO_PORT, &GPIO_InitStruct);
+    /* PB1 (SCL) 配置为推挽输出 50MHz (CNF=00, MODE=11) */
+    GPIOB->CFGLR = (GPIOB->CFGLR & ~0x000000F0u) | 0x00000030u;
 
     SCL_H();
     SDA_H();

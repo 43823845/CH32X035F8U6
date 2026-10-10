@@ -214,18 +214,31 @@ int _write(int fd, char *buf, int size)
 
 
 #else
-    for(i = 0; i < size; i++){
 #if(DEBUG == DEBUG_UART1)
-        while(USART_GetFlagStatus(USART1, USART_FLAG_TC) == RESET);
-        USART_SendData(USART1, *buf++);
-#elif(DEBUG == DEBUG_UART2)
-        while(USART_GetFlagStatus(USART2, USART_FLAG_TC) == RESET);
-        USART_SendData(USART2, *buf++);
-#elif(DEBUG == DEBUG_UART3)
-        while(USART_GetFlagStatus(USART3, USART_FLAG_TC) == RESET);
-        USART_SendData(USART3, *buf++);
-#endif
+    if (USART1->CTLR1 & USART_CTLR1_UE)
+    {
+        for(i = 0; i < size; i++){
+            while(USART_GetFlagStatus(USART1, USART_FLAG_TC) == RESET);
+            USART_SendData(USART1, *buf++);
+        }
     }
+#elif(DEBUG == DEBUG_UART2)
+    if (USART2->CTLR1 & USART_CTLR1_UE)
+    {
+        for(i = 0; i < size; i++){
+            while(USART_GetFlagStatus(USART2, USART_FLAG_TC) == RESET);
+            USART_SendData(USART2, *buf++);
+        }
+    }
+#elif(DEBUG == DEBUG_UART3)
+    if (USART3->CTLR1 & USART_CTLR1_UE)
+    {
+        for(i = 0; i < size; i++){
+            while(USART_GetFlagStatus(USART3, USART_FLAG_TC) == RESET);
+            USART_SendData(USART3, *buf++);
+        }
+    }
+#endif
 #endif
     return size;
 }
