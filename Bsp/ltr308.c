@@ -31,8 +31,12 @@ bool LTR308_Init(void)
     /* 设置测量速率: 100ms 积分时间, 100ms 重复率 (0x22) */
     I2C_WriteReg(LTR308_I2C_ADDR, LTR308_REG_MEAS_RATE, 0x22);
 
-    /* 使能中断输出: INT_EN=1, INT_POL=0 (Active Low 开漏低有效) -> 0x04 (配合硬件 10k 上拉) */
-    I2C_WriteReg(LTR308_I2C_ADDR, LTR308_REG_INT_CFG, 0x04);
+    /* 使能中断输出: INT_CFG 寄存器 (0x19)
+     * Bit 5:4 = 01b (ALS 通道中断源, 手册规格书与示例伪代码要求)
+     * Bit 3   = 0   (INT_POL=0, Active Low 开漏低有效, 配合硬件 10k 上拉)
+     * Bit 2   = 1   (INT_EN=1, 使能中断) -> 0x14
+     */
+    I2C_WriteReg(LTR308_I2C_ADDR, LTR308_REG_INT_CFG, 0x14);
     I2C_WriteReg(LTR308_I2C_ADDR, LTR308_REG_INT_PST, 0x00);
 
     /* 配置中断阈值: 上阈值设为 0，使每次光强采样完成均超出窗口触发 INT2 中断输出 */

@@ -21,17 +21,17 @@ bool LIS2DW12_Init(void)
     /* CTRL2: 开启 BDU (Block Data Update) 和 IF_ADD_INC (自动地址递增) */
     I2C_WriteReg(LIS2DW12_I2C_ADDR, LIS2DW12_REG_CTRL2, 0x0C);
 
-    /* CTRL3: 开漏输出 (PP_OD=1), 低电平有效 (H_LACTIVE=1) -> 0x0A (配合硬件 10k 上拉) */
-    I2C_WriteReg(LIS2DW12_I2C_ADDR, LIS2DW12_REG_CTRL3, 0x0A);
+    /* CTRL3: 开漏输出 (Bit 5: PP_OD=1), 低电平有效 (Bit 3: H_LACTIVE=1) -> 0x28 (配合硬件 10k 上拉) */
+    I2C_WriteReg(LIS2DW12_I2C_ADDR, LIS2DW12_REG_CTRL3, 0x28);
 
-    /* CTRL4_INT1: 使能 INT1 引脚上的数据就绪中断 (DRDY) -> 0x01 */
+    /* CTRL4_INT1: 使能 INT1 引脚上的数据就绪中断 (Bit 0: INT1_DRDY=1) -> 0x01 */
     I2C_WriteReg(LIS2DW12_I2C_ADDR, LIS2DW12_REG_CTRL4_INT1, 0x01);
 
     /* CTRL6: 满量程 ±2g (FS=00, 高性能模式下灵敏度 0.244 mg/LSB) */
     I2C_WriteReg(LIS2DW12_I2C_ADDR, LIS2DW12_REG_CTRL6, 0x00);
 
-    /* CTRL1: 输出速率 100Hz, 高性能模式 (High-Performance 14-bit) -> 0x50 */
-    I2C_WriteReg(LIS2DW12_I2C_ADDR, LIS2DW12_REG_CTRL1, 0x50);
+    /* CTRL1: 输出速率 100Hz (ODR=0101b), 真正高性能模式 (MODE=01b -> 14-bit) -> 0x54 */
+    I2C_WriteReg(LIS2DW12_I2C_ADDR, LIS2DW12_REG_CTRL1, 0x54);
 
     return true;
 }
