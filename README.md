@@ -39,41 +39,31 @@
 
 ```text
 CH32X035F8U/
-├── Driver/                                     # 通信总线抽象层 (硬件接口解耦)
-│   ├── soft_i2c.h / soft_i2c.c                 # 模拟 I2C 驱动 (PB0-SDA, PB1-SCL)，标准开漏时序
-│   └── spi_driver.h / spi_driver.c             # 硬件 SPI1 驱动 (PA5-SCK, PA7-MOSI)，36MHz 高速传输
-├── Bsp/                                        # 板级支持包与器件驱动层 (零 UI 残留)
+├── App/                                        # 应用层与系统入口 (业务逻辑收拢)
+│   ├── main.c                                  # 系统主循环、任务调度与页面数据流推送
+│   ├── app_sensor.h / app_sensor.c             # 传感器数据融合采样、中断统计与俯仰/横滚姿态角解算
+│   ├── ch32x035_it.h / ch32x035_it.c           # 中断服务函数 (EXTI 中断、系统嘀嗒等)
+│   ├── system_ch32x035.h / system_ch32x035.c   # 芯片系统时钟初始化配置 (48MHz 主频)
+│   └── ch32x035_conf.h                         # 固件库外设头文件使能配置
+├── Hardware/                                   # 硬件驱动层 (传感器/屏幕/外设总线/USB-CDC 收拢)
+│   ├── soft_i2c.h / soft_i2c.c                 # 模拟 I2C 驱动 (PB0-SDA, PB1-SCL)，标准开漏时序与超时检测
+│   ├── spi_driver.h / spi_driver.c             # 硬件 SPI1 驱动 (PA5-SCK, PA7-MOSI)，36MHz 高速传输
+│   ├── usb_cdc.h / usb_cdc.c                   # USB-CDC 虚拟串口驱动 (PC16-DM, PC17-DP 启动后重映射为调试串口)
+│   ├── lis2dw12.h / lis2dw12.c                 # LIS2DW12TR 三轴加速度计驱动 (I2C: 0x19, 14-bit 高性能, INT1 使能)
+│   ├── ltr308.h / ltr308.c                     # LTR-308ALS-01 环境光传感器驱动 (I2C: 0x53, 3X增益, INT2 使能)
+│   ├── st7735.h / st7735.c                     # 0.96寸 ST7735S 屏幕底层驱动 (80x160 偏移校准与窗口绘制)
 │   ├── bsp_int.h / bsp_int.c                   # 外部中断检测 (PA0-INT1 LIS2DW12, PA1-INT2 LTR308, EXTI7_0)
 │   ├── bsp_led.h / bsp_led.c                   # LED1 运行指示灯 (PB12，心跳控制)
 │   ├── bsp_key.h / bsp_key.c                   # 用户按键 SW2 (PA2，非阻塞消抖与长短按识别)
-│   ├── bsp_backlight.h / .c                    # 背光驱动 (PA3，TIM2_CH4 PWM 调光与开关)
-│   ├── ltr308.h / ltr308.c                     # LTR-308ALS-01 环境光照度传感器驱动 (I2C: 0x53, INT2 使能)
-│   ├── lis2dw12.h / lis2dw12.c                 # LIS2DW12TR 三轴加速度传感器驱动 (I2C: 0x19, INT1 DRDY 使能)
-│   └── st7735.h / st7735.c                     # 0.96寸 ST7735S 底层驱动 (80x160 偏移校准与窗口绘制)
-├── App/                                        # 业务逻辑与算法层
-│   └── app_sensor.h / app_sensor.c             # 传感器数据融合采样与俯仰/横滚姿态角解算
-├── wui/                                        # WCH 官方 WCHGUI 运行时核心库
-│   ├── libwui_0.2.a                            # WCHGUI 静态库 (RV32IMAC 架构)
-│   ├── wui.h                                   # WCHGUI 核心 API 与数据类型
-│   └── wui_widget.h                            # WCHGUI 控件系统与属性结构体
-├── wui_port/                                   # WCHGUI 硬件抽象移植层 (HAL)
-│   ├── wui_port.h / wui_port.c                 # 对接 ST7735S 窗口设置、SPI传输、片内Flash图像加载与堆内存管理
-│   ├── LCD.h                                   # 屏幕分辨率 (160x80) 与色彩宏定义
-│   └── LCD_Font.h / LCD_Font.c                 # 点阵字模库 (6x12, 8x16)
-├── WCHGUIProject/                              # WCHGUIDesigner 可视化设计器工程
-│   ├── project.wuiproj.json                    # 设计器工程元数据 (160x80)
-│   └── generated/wui_user/                     # ★ 设计器生成的代码目录 (工程直接引用)
-│       ├── wui_page.h / wui_page.c             # 页面注册与切换控制器
-│       ├── wui_page_none.h / .c                # 空页面定义
-│       ├── wui_page_page_1.h / .c              # Page 1: 系统初始化/开机欢迎页 (含 Logo 与标题)
-│       ├── wui_page_page_2.h / .c              # Page 2: 数据监控页 (光强、姿态、X/Y/Z、背光控件驱动)
-│       ├── wui_asset.h / wui_asset.c           # 字符串与静态资源映射
-│       ├── images.h / images.bin               # 图像元数据与二进制数据
-│       └── wui_internal_data.h                 # 片内 Flash 存储的图片字模二进制数组
-├── User/                                       # 系统主程序入口
-│   ├── main.c                                  # 系统主循环、页面调度与数据流推送
-│   ├── ch32x035_it.c / .h                      # 中断服务函数
-│   └── ch32x035_conf.h                         # 固件库头文件配置
+│   └── bsp_backlight.h / bsp_backlight.c       # 背光驱动 (PA3，TIM2_CH4 PWM 调光与开关)
+├── Core/                                       # WCH 官方 RISC-V QingKe 内核支持库
+├── Peripheral/                                 # WCH 官方标准外设固件库 (GPIO, TIM, SPI, USB 等)
+├── Startup/ & Ld/                              # 启动汇编 (startup_ch32x035.S) 与链接脚本 (Link.ld)
+├── Debug/                                      # WCH 官方调试串口底层支持库
+├── wui/                                        # WCH 官方 WCHGUI 运行时核心库 (libwui_0.2.a)
+├── wui_port/                                   # WCHGUI 硬件抽象移植层 (对齐 ST7735S、DMA、字体、内存池)
+├── WCHGUIProject/                              # WCHGUIDesigner 可视化设计器工程与生成代码 (wui_user/)
+├── obj/                                        # MounRiver 编译输出目录
 └── README.md                                   # 项目文档与技术规格书
 ```
 
