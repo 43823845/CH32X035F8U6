@@ -16,9 +16,9 @@
 | **Pin 4** | `PA2` (K1) | 用户按键 SW2 | 板载 10kΩ 上拉电阻 (R13) + 100nF 滤波电容 (C10)，按下为低电平 |
 | **Pin 5** | `PA3` (BL) | TFT 屏幕背光调节 | 驱动 DTC143ZE (U5) 偏置三极管控制 LEDK；支持 **TIM2_CH4 PWM 调光** / GPIO |
 | **Pin 6** | `PA4` (TRES) | TFT 屏幕复位 (Reset) | 通用推挽输出 (GPIO_Mode_Out_PP)，低电平复位 |
-| **Pin 7** | `PA5` (TSCL) | TFT 屏幕 SPI 时钟 (SCL) | **硬件 SPI1_SCK** 复用推挽输出 (36MHz 高速传输) |
+| **Pin 7** | `PA5` (TSCL) | TFT 屏幕 SPI 时钟 (SCL) | **硬件 SPI1_SCK** 复用推挽输出 (24MHz 高速传输，主频 48MHz/2) |
 | **Pin 8** | `PA6` (TRS) | TFT 屏幕 数据/命令选择 (DC) | 通用推挽输出 (GPIO_Mode_Out_PP)，高电平数据，低电平命令 |
-| **Pin 9** | `PA7` (TSDA) | TFT 屏幕 SPI 数据 (MOSI) | **硬件 SPI1_MOSI** 复用推挽输出 (36MHz 高速传输) |
+| **Pin 9** | `PA7` (TSDA) | TFT 屏幕 SPI 数据 (MOSI) | **硬件 SPI1_MOSI** 复用推挽输出 (24MHz 高速传输，主频 48MHz/2) |
 | **Pin 10** | `PB0` (SDA) | I2C 总线数据线 (SDA) | 连接 LTR-308 与 LIS2DW12，板载 4.7kΩ 上拉 (R7)，模拟开漏时序 |
 | **Pin 11** | `PB1` (SCL) | I2C 总线时钟线 (SCL) | 连接 LTR-308 与 LIS2DW12，板载 4.7kΩ 上拉 (R6)，推挽输出时钟 |
 | **Pin 12** | `PB3` | 未使用 | 悬空引脚 |
@@ -47,7 +47,7 @@ CH32X035F8U/
 │   └── ch32x035_conf.h                         # 固件库外设头文件使能配置
 ├── Hardware/                                   # 硬件驱动层 (传感器/屏幕/外设总线/USB-CDC 收拢)
 │   ├── soft_i2c.h / soft_i2c.c                 # 模拟 I2C 驱动 (PB0-SDA, PB1-SCL)，标准开漏时序与超时检测
-│   ├── spi_driver.h / spi_driver.c             # 硬件 SPI1 驱动 (PA5-SCK, PA7-MOSI)，36MHz 高速传输
+│   ├── spi_driver.h / spi_driver.c             # 硬件 SPI1 驱动 (PA5-SCK, PA7-MOSI)，24MHz 寄存器级高速直通传输
 │   ├── usb_cdc.h / usb_cdc.c                   # USB-CDC 虚拟串口驱动 (PC16-DM, PC17-DP 启动后重映射为调试串口)
 │   ├── lis2dw12.h / lis2dw12.c                 # LIS2DW12TR 三轴加速度计驱动 (I2C: 0x19, 14-bit 高性能, INT1 使能)
 │   ├── ltr308.h / ltr308.c                     # LTR-308ALS-01 环境光传感器驱动 (I2C: 0x53, 3X增益, INT2 使能)
@@ -113,7 +113,7 @@ void wui_page_page_2_update_data(float lux, float pitch, float roll, float ax, f
 - **姿态解算**：基于重力分量三角函数实时解算 Pitch / Roll 角。
 
 ### 4.3 0.96 寸彩色 TFT 屏：ST7735S 与 WCHGUI 移植
-- **接口**：硬件 SPI1（PA5: SCK, PA7: MOSI），36MHz 传输主频。
+- **接口**：硬件 SPI1（PA5: SCK, PA7: MOSI），24MHz 传输主频（48MHz/2）。
 - **坐标修正**：横屏模式（160×80），Offset 校准为 $X=1, Y=26$。
 - **HAL 移植**：`wui_port.c` 实现了标准 `wui_hal_t`，通过 `memcpy` 直接从片内 Flash 数组 `wui_internal_data` 读取开机图片，由 WCHGUI 静态库驱动无闪烁渲染。
 
