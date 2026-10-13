@@ -34,14 +34,11 @@
 #define COLOR_NAVY          0x000F
 #define COLOR_ORANGE        0xFD20
 
-void ST7735_Init(void);
-void ST7735_SetRotation(uint8_t m);
-void ST7735_SetAddressWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
-void ST7735_FillRect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t color);
-void ST7735_Clear(uint16_t color);
-void ST7735_DrawPixel(uint16_t x, uint16_t y, uint16_t color);
+#define LCD_SCREEN_WIDTH    160
+#define LCD_SCREEN_HEIGHT   80
 
-uint16_t ST7735_GetWidth(void);
-uint16_t ST7735_GetHeight(void);
+void ST7735_Init(void);
+void ST7735_SetAddressWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1);
+void ST7735_Clear(uint16_t color);
 
 #endif /* __ST7735_H */

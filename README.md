@@ -149,9 +149,12 @@ void wui_page_page_2_update_data(float lux, float pitch, float roll, float ax, f
   - 传感器完成光强积分转换后拉低引脚，由 MCU 侧 `EXTI_Line1` 下降沿中断捕获并累加计数器。
 - **中断控制器 (PFIC)**：
   - 统一映射至青稞 RISC-V 快速中断通道 `EXTI7_0_IRQn`（抢占 1，子优先级 1），保证微秒级低延迟响应；
-  - 提供 `Bsp_Int_GetInt1Count()`、`Bsp_Int_GetInt2Count()`、`Bsp_Int_GetInt1Flag()` 等统一数据接口供业务层查询。
+  - 提供 `Bsp_Int_Snapshot()` 单次原子快照以及 `Bsp_Int_GetInt1Count()`、`Bsp_Int_GetInt2Count()`、`Bsp_Int_GetInt1Flag()` 等统一数据接口供业务层查询。
 
-### 4.7 系统鲁棒性与异常防护设计 (Industrial-Grade Robustness)
+### 4.7 系统鲁棒性与性能深度优化设计 (Industrial-Grade Performance & Robustness)
+- **SPI 寄存器级高速总线驱动**：`SPI1_WriteBuffer` 消除逐字节固件库函数调用开销，直接寄存器操作使高频刷屏效率倍增；
+- **GUI 零冗余重绘 (Diff Change Detection)**：Page 2 数据控件仅在显示字符串发生实质变更时触发重绘，在静止/恒定状态下大幅节省 CPU 与 SPI 总线负载；
+- **整型快速格式化**：避免标准浮点格式化（`dtoa`）的巨大运行时与堆栈开销，提高帧率响应；
 - **软件 I2C 总线原子操作与防死锁**：SCL/SDA 引脚采用直接寄存器位带原子置位，`Soft_I2C_WaitAck()` 内置微秒延时与 400µs 宽容限超时保护，杜绝从机掉线或总线干扰导致的无限等待；
 - **SPI 传输故障安全保护 (Failsafe)**：所有硬件 SPI 标志位（`TXE`、`BSY`）等待循环均加入 `SPI_TIMEOUT_COUNT` 边界计数器，防止因时钟异常造成单片机硬卡死；
 - **USB CDC 临界区并发保护**：主线程 `SendBuffer` 与 USB 中断例程 `USBFS_IRQHandler` 操作环形缓冲区时，采用 `NVIC_DisableIRQ(USBFS_IRQn)` 临界区原子锁定，彻底杜绝数据乱序与重入冲突；
@@ -178,10 +181,10 @@ make all
 ### 5.2 资源占用情况 (RISC-V GCC rv32imacxw -Os)
 ```text
    text    data     bss     dec     hex filename
-  40968     328    7520   48816    beb0 CH32X035F8U.elf
+  41016     200    7376   48592    bdd0 CH32X035F8U.elf
 ```
-- **Flash (Text + Data)**：**41.30 KB** / 62 KB (占用率约 **66.6%**)
-- **SRAM (Data + BSS)**：**7.66 KB** / 20 KB (占用率约 **38.3%**，包含 WCHGUI 3KB 独立运行堆区与 USB CDC 缓冲区)
+- **Flash (Text + Data)**：**41.22 KB** / 62 KB (占用率约 **66.5%**)
+- **SRAM (Data + BSS)**：**7.40 KB** / 20 KB (占用率约 **37.0%**，包含 WCHGUI 3KB 独立运行堆区与 USB CDC 缓冲区)
 - 生成固件位于：
   - `obj/CH32X035F8U.elf`
   - `obj/CH32X035F8U.hex`

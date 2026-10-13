@@ -19,6 +19,5 @@ bool Soft_I2C_CheckDevice(uint8_t dev_addr);
 uint8_t I2C_WriteReg(uint8_t dev_addr, uint8_t reg_addr, uint8_t val);
 uint8_t I2C_ReadReg(uint8_t dev_addr, uint8_t reg_addr, uint8_t *val);
 uint8_t I2C_ReadBuffer(uint8_t dev_addr, uint8_t reg_addr, uint8_t *buf, uint16_t len);
-uint8_t I2C_WriteBuffer(uint8_t dev_addr, uint8_t reg_addr, const uint8_t *buf, uint16_t len);
 
 #endif /* __SOFT_I2C_H */

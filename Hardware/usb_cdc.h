@@ -1,7 +1,7 @@
 /********************************** (C) COPYRIGHT *******************************
  * File Name          : usb_cdc.h
  * Author             : WCH / Antigravity
- * Version            : V1.0.0
+ * Version            : V1.1.0
  * Description        : CH32X035 USB CDC 虚拟串口驱动头文件 (用于 Type-C 调试输出)
  *******************************************************************************/
 #ifndef __USB_CDC_H
@@ -29,24 +29,6 @@ bool USB_CDC_IsConfigured(void);
  * @return 实际写入环形队列的字节数
  */
 uint32_t USB_CDC_SendBuffer(const uint8_t *buf, uint32_t len);
-
-/**
- * @brief 发送以 '\0' 结尾的字符串到 USB CDC
- * @param str 字符串指针
- */
-void USB_CDC_SendString(const char *str);
-
-/**
- * @brief 获取接收缓冲区中可读取的字节数
- * @return 可读取的字节数
- */
-uint32_t USB_CDC_Available(void);
-
-/**
- * @brief 从接收缓冲区读取一个字节
- * @return 接收到的字节 (-1 表示无数据)
- */
-int16_t USB_CDC_ReadByte(void);
 
 /**
  * @brief 周期性轮询/维护 USB CDC 发送队列 (若在中断外使用)

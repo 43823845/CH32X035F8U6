@@ -52,4 +52,9 @@ uint32_t Bsp_Int_GetInt1Count(void);
  */
 uint32_t Bsp_Int_GetInt2Count(void);
 
+/**
+ * @brief 原子快照获取并清除中断计数与标志 (单次临界区，消除多次开关中断开销)
+ */
+void Bsp_Int_Snapshot(uint32_t *int1_count, uint32_t *int2_count, bool *int1_flag, bool *int2_flag);
+
 #endif /* __BSP_INT_H */

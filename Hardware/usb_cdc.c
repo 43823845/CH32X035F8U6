@@ -10,7 +10,6 @@
 
 #define CDC_MAX_PACKET_SIZE     64
 #define CDC_TX_RING_SIZE        512
-#define CDC_RX_RING_SIZE        256
 
 /* Line Coding 数据结构 (默认 115200 8N1) */
 static uint8_t s_line_coding[7] = {
@@ -38,11 +37,6 @@ __attribute__((aligned(4))) static uint8_t s_ep3_buf[CDC_MAX_PACKET_SIZE];
 static uint8_t  s_tx_ring[CDC_TX_RING_SIZE];
 static volatile uint16_t s_tx_head = 0;
 static volatile uint16_t s_tx_tail = 0;
-
-/* 接收环形队列 */
-static uint8_t  s_rx_ring[CDC_RX_RING_SIZE];
-static volatile uint16_t s_rx_head = 0;
-static volatile uint16_t s_rx_tail = 0;
 
 /* USB CDC 设备描述符 */
 static const uint8_t s_device_descriptor[] = {
@@ -135,8 +129,6 @@ static void USBFS_Device_Reset(void)
     s_ep0_remain_len = 0;
     s_tx_head        = 0;
     s_tx_tail        = 0;
-    s_rx_head        = 0;
-    s_rx_tail        = 0;
 }
 
 void USB_CDC_Init(void)
@@ -226,29 +218,6 @@ uint32_t USB_CDC_SendBuffer(const uint8_t *buf, uint32_t len)
 
     NVIC_EnableIRQ(USBFS_IRQn);
     return written;
-}
-
-void USB_CDC_SendString(const char *str)
-{
-    if (str)
-    {
-        USB_CDC_SendBuffer((const uint8_t *)str, strlen(str));
-    }
-}
-
-uint32_t USB_CDC_Available(void)
-{
-    return (s_rx_head >= s_rx_tail) ? 
-           (s_rx_head - s_rx_tail) : 
-           (CDC_RX_RING_SIZE - s_rx_tail + s_rx_head);
-}
-
-int16_t USB_CDC_ReadByte(void)
-{
-    if (s_rx_head == s_rx_tail) return -1;
-    uint8_t ch = s_rx_ring[s_rx_tail];
-    s_rx_tail = (s_rx_tail + 1) % CDC_RX_RING_SIZE;
-    return ch;
 }
 
 void USB_CDC_Poll(void)
@@ -445,20 +414,8 @@ void USBFS_IRQHandler(void)
 
             /* -------- 端点 2: CDC Data (Bulk OUT) -------- */
             case 2:
-            {
-                uint16_t rx_len = USBFSD->RX_LEN;
-                for (uint16_t i = 0; i < rx_len; i++)
-                {
-                    uint16_t next_head = (s_rx_head + 1) % CDC_RX_RING_SIZE;
-                    if (next_head != s_rx_tail)
-                    {
-                        s_rx_ring[s_rx_head] = s_ep2_buf[i];
-                        s_rx_head = next_head;
-                    }
-                }
                 USBFSD->UEP2_CTRL_H = (USBFSD->UEP2_CTRL_H & ~USBFS_UEP_R_RES_MASK) | USBFS_UEP_R_RES_ACK;
                 break;
-            }
 
             /* -------- 端点 3: CDC Data (Bulk IN) -------- */
             case 3:

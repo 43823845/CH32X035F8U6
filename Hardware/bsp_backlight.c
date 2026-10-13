@@ -51,11 +51,6 @@ uint8_t Backlight_GetBrightness(void)
     return s_brightness;
 }
 
-void Backlight_On(void)
-{
-    Backlight_SetBrightness(s_brightness > 0 ? s_brightness : 80);
-}
-
 void Backlight_Off(void)
 {
     Backlight_SetBrightness(0);

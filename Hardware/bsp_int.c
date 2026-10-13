@@ -80,6 +80,16 @@ uint32_t Bsp_Int_GetInt2Count(void)
     return count;
 }
 
+void Bsp_Int_Snapshot(uint32_t *int1_count, uint32_t *int2_count, bool *int1_flag, bool *int2_flag)
+{
+    NVIC_DisableIRQ(EXTI7_0_IRQn);
+    if (int1_count) *int1_count = s_int1_count;
+    if (int2_count) *int2_count = s_int2_count;
+    if (int1_flag)  { *int1_flag = s_int1_flag; s_int1_flag = false; }
+    if (int2_flag)  { *int2_flag = s_int2_flag; s_int2_flag = false; }
+    NVIC_EnableIRQ(EXTI7_0_IRQn);
+}
+
 /* ================== EXTI7_0 快速中断服务例程 ================== */
 void EXTI7_0_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
 void EXTI7_0_IRQHandler(void)

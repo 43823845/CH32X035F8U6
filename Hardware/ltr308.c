@@ -2,8 +2,6 @@
 #include "soft_i2c.h"
 #include "debug.h"
 
-static LTR308_Gain_t s_current_gain = LTR308_GAIN_3X;
-
 bool LTR308_Init(void)
 {
     uint8_t part_id = 0;
@@ -25,8 +23,7 @@ bool LTR308_Init(void)
     }
 
     /* 设置增益: 3X */
-    s_current_gain = LTR308_GAIN_3X;
-    I2C_WriteReg(LTR308_I2C_ADDR, LTR308_REG_GAIN, (uint8_t)s_current_gain);
+    I2C_WriteReg(LTR308_I2C_ADDR, LTR308_REG_GAIN, LTR308_GAIN_3X);
 
     /* 设置测量速率: 100ms 积分时间, 100ms 重复率 (0x22) */
     I2C_WriteReg(LTR308_I2C_ADDR, LTR308_REG_MEAS_RATE, 0x22);

@@ -121,12 +121,16 @@ int main(void)
                 Backlight_GetBrightness()
             );
 
-            /* 每 500ms 向上位机串口助手输出一次结构化调试信息 */
+            /* 每 500ms 向上位机串口助手输出一次结构化调试信息 (整型快速输出，避免浮点格式化膨胀与异常) */
             if (tick_count % 50 == 0)
             {
-                printf("[DEBUG] Lux:%6.1f | P:%3.0f R:%3.0f | X:%4.0f Y:%4.0f Z:%4.0f | BL:%3d%% | INT1:%lu INT2:%lu\r\n",
-                       data->lux, data->pitch, data->roll,
-                       data->acc_x, data->acc_y, data->acc_z,
+                int lux_int = (int)data->lux;
+                int lux_frac = (int)((data->lux - (float)lux_int) * 10.0f);
+                if (lux_frac < 0) lux_frac = -lux_frac;
+                printf("[DEBUG] Lux:%4d.%01d | P:%3d R:%3d | X:%4d Y:%4d Z:%4d | BL:%3d%% | INT1:%lu INT2:%lu\r\n",
+                       lux_int, lux_frac,
+                       (int)data->pitch, (int)data->roll,
+                       (int)data->acc_x, (int)data->acc_y, (int)data->acc_z,
                        Backlight_GetBrightness(),
                        (unsigned long)data->int1_count,
                        (unsigned long)data->int2_count);

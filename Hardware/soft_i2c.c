@@ -1,10 +1,10 @@
 #include "soft_i2c.h"
 #include "debug.h"
 
-/* 极简 I2C 延时，约 2~3us */
+/* 极简 I2C 延时: 48MHz 下约 1.5~2us 空循环，避免频繁重载 SysTick 寄存器 */
 static inline void I2C_Delay(void)
 {
-    Delay_Us(2);
+    for (volatile uint32_t i = 0; i < 16; i++);
 }
 
 #define SCL_H()    do { GPIOB->BSHR = GPIO_Pin_1; } while(0)
@@ -184,24 +184,6 @@ uint8_t I2C_ReadBuffer(uint8_t dev_addr, uint8_t reg_addr, uint8_t *buf, uint16_
     for (uint16_t i = 0; i < len; i++)
     {
         buf[i] = Soft_I2C_RecvByte((i == len - 1) ? 1 : 0);
-    }
-    Soft_I2C_Stop();
-    return 0;
-}
-
-uint8_t I2C_WriteBuffer(uint8_t dev_addr, uint8_t reg_addr, const uint8_t *buf, uint16_t len)
-{
-    Soft_I2C_Start();
-    Soft_I2C_SendByte((dev_addr << 1) | 0);
-    if (Soft_I2C_WaitAck()) return 1;
-
-    Soft_I2C_SendByte(reg_addr);
-    if (Soft_I2C_WaitAck()) return 2;
-
-    for (uint16_t i = 0; i < len; i++)
-    {
-        Soft_I2C_SendByte(buf[i]);
-        if (Soft_I2C_WaitAck()) return 3;
     }
     Soft_I2C_Stop();
     return 0;
