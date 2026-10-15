@@ -31,16 +31,13 @@ static const wui_widget_desc_t widgets_page_1[] = {
 
     [PAGE_1_COMPONENT_003] = {
         .widget_id = PAGE_1_COMPONENT_003,
-        .type      = Wui_w_SimpleString,
-        .x         = 14,
-        .y         = 44,
+        .type      = Wui_w_StaticImage,
+        .x         = 13,
+        .y         = 46,
         .w         = 134,
-        .h         = 24,
-        .props.simplestring = {
-            .str_id   = WUI_STR_PAGE_1_COMPONENT_003,
-            .fg_color = RGB888_TO_RGB565(79, 195, 247),
-            .bg_color = RGB888_TO_RGB565(0, 0, 0),
-            .align    = WUI_SIMPLESTRING_ALIGN_LEFT,
+        .h         = 18,
+        .props.staticimg = {
+            .img_id = IMAGE_TEXT_WUI_PAGE_1_COMPONENT_003,
         },
     },
 

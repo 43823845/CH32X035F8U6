@@ -18,6 +18,7 @@ typedef enum {
     IMAGE_TEXT_WUI_PAGE_1_COMPONENT_001 = MAKE_IMAGE_ID(IMAGE_TYPE_RAW, 0),
     IMAGE_TEXT_WUI_PAGE_3_COMPONENT_002 = MAKE_IMAGE_ID(IMAGE_TYPE_RAW, 1),
     IMAGE_TEXT_WUI_PAGE_3_COMPONENT_001 = MAKE_IMAGE_ID(IMAGE_TYPE_RAW, 2),
+    IMAGE_TEXT_WUI_PAGE_1_COMPONENT_003 = MAKE_IMAGE_ID(IMAGE_TYPE_RAW, 3),
 } image_index_t;
 
 static const image_info_t image_table[] = {
@@ -39,13 +40,19 @@ static const image_info_t image_table[] = {
         .height    = 22,
         .data_size = 3300,
     },
+    {  // IMAGE_TEXT_WUI_PAGE_1_COMPONENT_003
+        .addr      = 0x00002AE4,
+        .width     = 134,
+        .height    = 18,
+        .data_size = 4824,
+    },
 };
 
-#define RAW_IMAGE_COUNT   3
+#define RAW_IMAGE_COUNT   4
 #define RLE_IMAGE_COUNT   0
 #define CLUT_IMAGE_COUNT  0
 #define CLUT4_IMAGE_COUNT 0
-#define IMAGE_COUNT       3
+#define IMAGE_COUNT       4
 
 static inline const image_info_t* get_image(image_index_t index) {
     uint16_t idx = IMAGE_GET_INDEX(index);
