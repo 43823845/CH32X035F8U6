@@ -17,6 +17,7 @@
 typedef enum {
     KEY_EVENT_NONE = 0,
     KEY_EVENT_CLICK,
+    KEY_EVENT_DOUBLE_CLICK,
     KEY_EVENT_LONG_PRESS
 } KeyEvent_t;
 

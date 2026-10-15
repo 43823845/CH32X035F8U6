@@ -56,6 +56,16 @@ static void Handle_Key_Event(KeyEvent_t key)
             wui_page_switch((uint16_t)WUI_PAGE_2);
         }
     }
+    else if (key == KEY_EVENT_DOUBLE_CLICK)
+    {
+        /* 双击按键: 3 挡循环调光 (100% -> 60% -> 20% -> 100%) */
+        uint8_t new_bl = Backlight_CycleBrightness();
+        printf("[KEY] Double Click -> Backlight Level: %d%%\r\n", (int)new_bl);
+        if (s_cur_page == WUI_PAGE_4)
+        {
+            wui_page_page_4_update_data(App_Sensor_GetData()->lux, new_bl);
+        }
+    }
     else if (key == KEY_EVENT_LONG_PRESS)
     {
         /* 长按按键: 开关背光 */
@@ -112,14 +122,6 @@ int main(void)
         wui_page_ui_update();
         wui_page_ui_loop();
         USB_CDC_Poll();
-
-        KeyEvent_t pc17_boot_key = Key_PC17_Scan();
-        if (pc17_boot_key == KEY_EVENT_CLICK)
-        {
-            uint8_t new_bl = Backlight_CycleBrightness();
-            printf("[KEY] PC17 Click -> Backlight Level: %d%%\r\n", (int)new_bl);
-        }
-
         Delay_Ms(10);
     }
 
