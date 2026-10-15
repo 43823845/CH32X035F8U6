@@ -9,11 +9,6 @@
 #define KEY_GPIO_PORT   GPIOA
 #define KEY_RCC_PORT    RCC_APB2Periph_GPIOA
 
-/* SW1 (PC17) 复用按键 (自适应基准电平) */
-#define KEY_PC17_PIN    GPIO_Pin_17
-#define KEY_PC17_PORT   GPIOC
-#define KEY_PC17_RCC    RCC_APB2Periph_GPIOC
-
 typedef enum {
     KEY_EVENT_NONE = 0,
     KEY_EVENT_CLICK,
@@ -22,7 +17,6 @@ typedef enum {
 } KeyEvent_t;
 
 void Key_Init(void);
-KeyEvent_t Key_Scan(void);       /* 扫描 PA2 用户按键 (切页/长按关屏) */
-KeyEvent_t Key_PC17_Scan(void);  /* 扫描 PC17 复用按键 (3挡调光) */
+KeyEvent_t Key_Scan(void);       /* 扫描 PA2 用户按键 (单击切页/双击调光/长按开关屏) */
 
 #endif /* __BSP_KEY_H */

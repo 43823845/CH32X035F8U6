@@ -1,22 +1,16 @@
 #include "bsp_key.h"
-#include "usb_cdc.h"
-#include "debug.h"
 
 void Key_Init(void)
 {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
 
-    /* 1. 初始化 PA2 (SW2 用户按键): 上拉输入 */
+    /* 初始化 PA2 (SW2 用户按键): 上拉输入 */
     RCC_APB2PeriphClockCmd(KEY_RCC_PORT, ENABLE);
 
     GPIO_InitStruct.GPIO_Pin = KEY_PIN;
     GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IPU; /* 上拉输入 */
     GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
     GPIO_Init(KEY_GPIO_PORT, &GPIO_InitStruct);
-
-    /* 2. PC17 在硬件上与 USB D+ (UDP) 物理共用。
-     * 为确保 USB CDC 虚拟串口 100% 稳定运行，不作破坏性模式重写。 */
-    RCC_APB2PeriphClockCmd(KEY_PC17_RCC, ENABLE);
 }
 
 /**
@@ -99,15 +93,4 @@ KeyEvent_t Key_Scan(void)
     }
 
     return event;
-}
-
-/**
- * @brief  PC17 (SW1) 扫描接口
- *         说明: PC17 在硬件上直连 USB 2.0 全速 D+ 数据线。在 USB CDC 驱动使能后，
- *         物理层必须维持稳定的 1.5kΩ 上拉电平。为保障 USB 虚拟串口通信绝对稳定，
- *         严禁在运行期对 D+ 施加任何拉低扰动。
- */
-KeyEvent_t Key_PC17_Scan(void)
-{
-    return KEY_EVENT_NONE;
 }
