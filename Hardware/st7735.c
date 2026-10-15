@@ -299,3 +299,26 @@ void ST7735_DrawRGB16Span(uint16_t x, uint16_t y, uint16_t len, const uint16_t *
     }
 }
 
+void ST7735_DrawRGB16Block(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h, const uint16_t *pixels)
+{
+    if (x0 >= s_width || y0 >= s_height || w == 0 || h == 0 || pixels == 0) return;
+    if (x0 + w > s_width)  w = s_width - x0;
+    if (y0 + h > s_height) h = s_height - y0;
+
+    ST7735_SetAddressWindow(x0, y0, x0 + w - 1, y0 + h - 1);
+    DC_DATA();
+
+    uint32_t total = (uint32_t)w * h;
+    for (uint32_t i = 0; i < total; i++)
+    {
+        uint16_t c = pixels[i];
+        while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE) == RESET);
+        SPI_I2S_SendData(SPI1, (uint8_t)(c >> 8));
+
+        while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE) == RESET);
+        SPI_I2S_SendData(SPI1, (uint8_t)c);
+    }
+    while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_BSY) == SET);
+}
+
+

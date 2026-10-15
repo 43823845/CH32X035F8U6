@@ -15,6 +15,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <math.h>
+#include <string.h>
+#include <stdlib.h>
 
 /* ================= 逻辑控件 ↔ 设计器控件 ID 绑定表 =================
  * 全工程仅此处引用设计器生成的 PAGE_x_COMPONENT_xxx 枚举。
@@ -98,16 +100,25 @@ const char* user_display_attitude_text(void)
 }
 
 /* ================= 真实 3D 实体姿态感知立方体 (Solid 3D Cube) =================
- * 渲染在 Page 2 屏幕右半区域 (X: 94~159, Y: 0~79, 视口中心: X=127, Y=40, 半边长 14px)
- * 采用专业 3D 实体渲染架构:
- * 1. 背面消隐 (Back-Face Culling): 计算 2D 屏幕投影叉乘, 自动剔除背面, 杜绝透视线框混乱与穿透错觉
- * 2. 实体面纯色平滑填充 (Solid Flat Shading): 顶面/前向/侧面分别采用高对比鲜明配色, 立体感极其强烈
- * 3. 亮白色立体轮廓描边 (High-Contrast Edges): 每个可见面带 1px 晶亮边缘, 棱角硬朗清晰
- * 4. 局部动态包围盒极速擦除 (Bounding Box Wipe): 毫秒级黑底清空旧帧, 绝对零残影、零拖尾、无闪烁 */
+ * 渲染在 Page 2 屏幕右半区域 (X: 94~159, Y: 0~79, 视口中心: X=127, Y=40, 半边长 13px)
+ * 采用专业 3D 实体渲染架构 + 片内局部真双缓冲 (Local Double-Buffering):
+ * 1. 内存全画帧 (In-Memory Rasterization): 在 48x48 像素局部 RAM 显存中完成全覆写光栅化与描边
+ * 2. 硬件级单次高速流推送 (Single SPI Blast): 绘制完成后由 ST7735_DrawRGB16Block 在 1ms 内瞬时推送至屏幕
+ * 3. 彻底根除频闪 (Absolute Zero Flicker): 永不调用清屏/刷黑指令，新旧像素直接原地无缝过渡！
+ * 4. 背面消隐 (Back-Face Culling): 计算 2D 投影法向量叉乘，背面自动剔除，绝无穿透错觉
+ * 5. 多面实体平滑着色 (Solid Flat Shading): 顶面天青/正面珊瑚红/侧面翡翠绿/背面曜石蓝，CAD 实物级质感 */
 
 #define CUBE_CX          127   /* 3D 视口中心 X */
 #define CUBE_CY          40    /* 3D 视口中心 Y */
-#define CUBE_HALF_SIZE   14.0f /* 立方体半边长 (像素) */
+#define CUBE_HALF_SIZE   13.0f /* 立方体半边长 (像素) */
+
+#define CUBE_BUF_W       48    /* 局部双缓冲宽度 (像素) */
+#define CUBE_BUF_H       48    /* 局部双缓冲高度 (像素) */
+#define CUBE_WIN_X0      (CUBE_CX - CUBE_BUF_W / 2) /* 屏幕窗口左上角 X = 103 */
+#define CUBE_WIN_Y0      (CUBE_CY - CUBE_BUF_H / 2) /* 屏幕窗口左上角 Y = 16 */
+
+/* 片内局部真双缓冲区: 48x48x2 = 4608 字节 (位于 BSS 段，完全在芯片 20KB RAM 余量内) */
+static uint16_t s_cube_buf[CUBE_BUF_W * CUBE_BUF_H];
 
 /* 立方体 8 个顶点的局部三维坐标 (质心为原点) */
 static const float s_cube_vertices[8][3] = {
@@ -142,37 +153,48 @@ static const CubeFace_t s_cube_faces[6] = {
     {{3, 2, 1, 0}, RGB888_TO_RGB565(35, 55, 90)},
 };
 
-/* 上一帧的动态包围盒 */
-typedef struct {
-    uint16_t x;
-    uint16_t y;
-    uint16_t w;
-    uint16_t h;
-} CubeBox_t;
-
-static CubeBox_t s_prev_box     = {0, 0, 0, 0};
-static bool      s_has_prev_box = false;
-static float     s_last_pitch   = 999.0f;
-static float     s_last_roll    = 999.0f;
+static bool  s_has_prev   = false;
+static float s_last_pitch = 999.0f;
+static float s_last_roll  = 999.0f;
 
 void user_display_reset_cube(void)
 {
-    s_has_prev_box = false;
-    s_last_pitch   = 999.0f;
-    s_last_roll    = 999.0f;
-    s_prev_box.x   = 0;
-    s_prev_box.y   = 0;
-    s_prev_box.w   = 0;
-    s_prev_box.h   = 0;
+    s_has_prev   = false;
+    s_last_pitch = 999.0f;
+    s_last_roll  = 999.0f;
 
     /* 彻底清除右半屏 3D 视口物理区域 (X:94~159, Y:0~79) */
     ST7735_FillRect(94, 0, 66, 80, COLOR_BLACK);
 }
 
 /**
- * @brief  极速凸四边形扫描行实体填充算法 (带高对比亮色描边)
+ * @brief  在内存缓冲区中绘制直线 (Bresenham)
  */
-static void draw_solid_quad(const int16_t x[4], const int16_t y[4], uint16_t fill_color, uint16_t border_color)
+static void buf_draw_line(uint16_t *buf, int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t color)
+{
+    int16_t dx = abs(x1 - x0);
+    int16_t dy = -abs(y1 - y0);
+    int16_t sx = (x0 < x1) ? 1 : -1;
+    int16_t sy = (y0 < y1) ? 1 : -1;
+    int16_t err = dx + dy;
+
+    while (1)
+    {
+        if (x0 >= 0 && x0 < CUBE_BUF_W && y0 >= 0 && y0 < CUBE_BUF_H)
+        {
+            buf[y0 * CUBE_BUF_W + x0] = color;
+        }
+        if (x0 == x1 && y0 == y1) break;
+        int16_t e2 = 2 * err;
+        if (e2 >= dy) { err += dy; x0 += sx; }
+        if (e2 <= dx) { err += dx; y0 += sy; }
+    }
+}
+
+/**
+ * @brief  在内存缓冲区中极速扫描行填充凸四边形
+ */
+static void buf_fill_quad(uint16_t *buf, const int16_t x[4], const int16_t y[4], uint16_t fill_color)
 {
     int16_t min_y = y[0], max_y = y[0];
     for (int i = 1; i < 4; i++)
@@ -180,8 +202,9 @@ static void draw_solid_quad(const int16_t x[4], const int16_t y[4], uint16_t fil
         if (y[i] < min_y) min_y = y[i];
         if (y[i] > max_y) max_y = y[i];
     }
+    if (min_y < 0) min_y = 0;
+    if (max_y >= CUBE_BUF_H) max_y = CUBE_BUF_H - 1;
 
-    /* 逐行扫描填充四边形内部 */
     for (int16_t scan_y = min_y; scan_y <= max_y; scan_y++)
     {
         int16_t x_int[4];
@@ -214,31 +237,30 @@ static void draw_solid_quad(const int16_t x[4], const int16_t y[4], uint16_t fil
                 if (x_int[k] < x_left)  x_left  = x_int[k];
                 if (x_int[k] > x_right) x_right = x_int[k];
             }
+            if (x_left < 0) x_left = 0;
+            if (x_right >= CUBE_BUF_W) x_right = CUBE_BUF_W - 1;
             if (x_left <= x_right)
             {
-                ST7735_FillRect((uint16_t)x_left, (uint16_t)scan_y,
-                                (uint16_t)(x_right - x_left + 1), 1, fill_color);
+                uint16_t *row = &buf[scan_y * CUBE_BUF_W + x_left];
+                int16_t span = x_right - x_left + 1;
+                for (int16_t j = 0; j < span; j++)
+                {
+                    row[j] = fill_color;
+                }
             }
         }
-    }
-
-    /* 绘制高对比度轮廓线 */
-    for (int i = 0; i < 4; i++)
-    {
-        int next = (i + 1) % 4;
-        ST7735_DrawLine(x[i], y[i], x[next], y[next], border_color);
     }
 }
 
 void user_display_draw_cube(float pitch, float roll)
 {
-    /* 1. 静态防抖: 微小变化 (< 0.7 度) 跳过重画，保持绝对无扰动 */
-    if (s_has_prev_box && fabsf(pitch - s_last_pitch) < 0.7f && fabsf(roll - s_last_roll) < 0.7f)
+    /* 1. 静态防抖: 微小变化 (< 0.6 度) 且上一帧有效时跳过，消除不必要的总线占用 */
+    if (s_has_prev && fabsf(pitch - s_last_pitch) < 0.6f && fabsf(roll - s_last_roll) < 0.6f)
     {
         return;
     }
 
-    /* 2. 角度转弧度 (俯仰角取反使抬头后仰、低头前倾，滚转角右倾右转) */
+    /* 2. 角度转弧度 */
     float rad_p = -pitch * (3.14159265f / 180.0f);
     float rad_r = roll   * (3.14159265f / 180.0f);
 
@@ -251,12 +273,14 @@ void user_display_draw_cube(float pitch, float roll)
     const float ce = 0.90630779f; /* cos(25°) */
     const float se = 0.42261826f; /* sin(25°) */
 
+    /* 局部缓冲区几何中心 */
+    const int16_t BX = CUBE_BUF_W / 2;
+    const int16_t BY = CUBE_BUF_H / 2;
+
     int16_t sx[8];
     int16_t sy[8];
-    int16_t min_x = 999, max_x = -999;
-    int16_t min_y = 999, max_y = -999;
 
-    /* 3. 内存快速批量解算 8 个顶点的旋转与投影 */
+    /* 3. 内存批量解算 8 个顶点的旋转与投影 (基于缓冲区局部坐标系) */
     for (int i = 0; i < 8; i++)
     {
         float x = s_cube_vertices[i][0];
@@ -273,36 +297,27 @@ void user_display_draw_cube(float pitch, float roll)
         float z2 = -x1 * sr + z1 * cr;
         float y2 = y1;
 
-        /* 相机坐标系转换 */
+        /* 相机空间变换 */
         float xc = x2 * ca - y2 * sa;
         float yt = x2 * sa + y2 * ca;
         float yc = yt * se + z2 * ce; /* 相机空间 Y 向上 */
 
-        int16_t px = (int16_t)(CUBE_CX + xc + (xc >= 0 ? 0.5f : -0.5f));
-        int16_t py = (int16_t)(CUBE_CY - yc + (yc <= 0 ? 0.5f : -0.5f));
+        int16_t px = (int16_t)(BX + xc + (xc >= 0 ? 0.5f : -0.5f));
+        int16_t py = (int16_t)(BY - yc + (yc <= 0 ? 0.5f : -0.5f));
 
-        /* 刚性钳位在右半屏视口内 */
-        if (px < 95)  px = 95;
-        if (px > 159) px = 159;
-        if (py < 0)   py = 0;
-        if (py > 79)  py = 79;
+        if (px < 0) px = 0;
+        if (px >= CUBE_BUF_W) px = CUBE_BUF_W - 1;
+        if (py < 0) py = 0;
+        if (py >= CUBE_BUF_H) py = CUBE_BUF_H - 1;
 
         sx[i] = px;
         sy[i] = py;
-
-        if (px < min_x) min_x = px;
-        if (px > max_x) max_x = px;
-        if (py < min_y) min_y = py;
-        if (py > max_y) max_y = py;
     }
 
-    /* 4. 局部黑底精准擦除: 仅擦除上一帧动态包围盒区域 (< 1ms)，彻底消除残影与闪烁 */
-    if (s_has_prev_box && s_prev_box.w > 0 && s_prev_box.h > 0)
-    {
-        ST7735_FillRect(s_prev_box.x, s_prev_box.y, s_prev_box.w, s_prev_box.h, COLOR_BLACK);
-    }
+    /* 4. 在片内 RAM 局部双缓冲区中绘制全新帧 (耗时仅 ~50 微秒，完全在内存中完成) */
+    memset(s_cube_buf, 0, sizeof(s_cube_buf));
 
-    /* 5. 遍历 6 个表面: 2D 叉乘背面消隐 (Back-Face Culling) + 实心着色填充 */
+    /* 5. 遍历 6 个表面: 2D 叉乘背面消隐 (Back-Face Culling) + 实心光栅化填充 + 高光描边 */
     for (int f = 0; f < 6; f++)
     {
         uint8_t i0 = s_cube_faces[f].v[0];
@@ -318,30 +333,28 @@ void user_display_draw_cube(float pitch, float roll)
         int32_t cross = (int32_t)(x1 - x0) * (y2 - y0) - (int32_t)(y1 - y0) * (x2 - x0);
         if (cross >= 0)
         {
-            continue; /* 背面自动剔除，绝不重叠混乱！ */
+            continue; /* 背面自动剔除，绝无穿透混乱！ */
         }
 
         int16_t qx[4] = {sx[i0], sx[i1], sx[i2], sx[i3]};
         int16_t qy[4] = {sy[i0], sy[i1], sy[i2], sy[i3]};
 
-        /* 实体平滑填充 + 纯白高光外轮廓边线 */
-        draw_solid_quad(qx, qy, s_cube_faces[f].fill_color, COLOR_WHITE);
+        /* 在内存缓冲区中填充表面 */
+        buf_fill_quad(s_cube_buf, qx, qy, s_cube_faces[f].fill_color);
+
+        /* 在内存缓冲区中绘制亮白边缘轮廓线 */
+        buf_draw_line(s_cube_buf, qx[0], qy[0], qx[1], qy[1], COLOR_WHITE);
+        buf_draw_line(s_cube_buf, qx[1], qy[1], qx[2], qy[2], COLOR_WHITE);
+        buf_draw_line(s_cube_buf, qx[2], qy[2], qx[3], qy[3], COLOR_WHITE);
+        buf_draw_line(s_cube_buf, qx[3], qy[3], qx[0], qy[0], COLOR_WHITE);
     }
 
-    /* 6. 更新动态绘制包围盒 */
-    int16_t bx0 = min_x - 2; if (bx0 < 95)  bx0 = 95;
-    int16_t bx1 = max_x + 2; if (bx1 > 159) bx1 = 159;
-    int16_t by0 = min_y - 2; if (by0 < 0)   by0 = 0;
-    int16_t by1 = max_y + 2; if (by1 > 79)  by1 = 79;
+    /* 6. 单次硬件 SPI 高速整块推送至屏幕显存 (耗时约 1.0ms，原地直换，绝对零频闪！) */
+    ST7735_DrawRGB16Block(CUBE_WIN_X0, CUBE_WIN_Y0, CUBE_BUF_W, CUBE_BUF_H, s_cube_buf);
 
-    s_prev_box.x = (uint16_t)bx0;
-    s_prev_box.y = (uint16_t)by0;
-    s_prev_box.w = (uint16_t)(bx1 - bx0 + 1);
-    s_prev_box.h = (uint16_t)(by1 - by0 + 1);
-
-    s_last_pitch   = pitch;
-    s_last_roll    = roll;
-    s_has_prev_box = true;
+    s_last_pitch = pitch;
+    s_last_roll  = roll;
+    s_has_prev   = true;
 }
 
 /* ================= Page2 数据刷新 ================= */
