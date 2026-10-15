@@ -1,4 +1,5 @@
 #include "bsp_key.h"
+#include "debug.h"
 
 void Key_Init(void)
 {
@@ -50,46 +51,76 @@ KeyEvent_t Key_Scan(void)
 
 KeyEvent_t Key_PC17_Scan(void)
 {
-    static uint16_t pc17_press_count = 0;
-    static uint8_t  pc17_released    = 1;
-    static uint8_t  pc17_idle_level  = 0;
-    static uint8_t  pc17_inited      = 0;
+    static uint8_t  s_pc17_integrator  = 0;
+    static uint8_t  s_pc17_pressed     = 0;
+    static uint16_t s_pc17_hold_ticks  = 0;
+    static uint8_t  s_pc17_idle_level  = 0;
+    static uint8_t  s_pc17_inited      = 0;
     KeyEvent_t event = KEY_EVENT_NONE;
 
-    uint8_t curr = GPIO_ReadInputDataBit(KEY_PC17_PORT, KEY_PC17_PIN);
-
-    /* 首次上电自动捕获当前稳态基准电平 (无论板载为高电平触发还是低电平触发均可完美自适应) */
-    if (!pc17_inited)
+    /* 1. 微秒级过采样多数表决滤波:
+     * 连续采样 5 次 (每次间隔 8us，窗口跨度约 40us)。
+     * USB 12Mbps 全速通信每个 bit 仅 83ns，40us 窗口覆盖约 500 个 bit 周期，
+     * 多数表决算法可彻底抹除 USB 调试日志数据帧与 SOF 令牌带来的瞬态高频跳变！ */
+    uint8_t high_samples = 0;
+    for (uint8_t i = 0; i < 5; i++)
     {
-        pc17_idle_level = curr;
-        pc17_inited = 1;
+        if (GPIO_ReadInputDataBit(KEY_PC17_PORT, KEY_PC17_PIN) != Bit_RESET)
+        {
+            high_samples++;
+        }
+        Delay_Us(8);
+    }
+    uint8_t curr = (high_samples >= 3) ? 1 : 0;
+
+    /* 2. 首次上电自动捕获稳态基准电平 */
+    if (!s_pc17_inited)
+    {
+        s_pc17_idle_level = curr;
+        s_pc17_inited = 1;
         return KEY_EVENT_NONE;
     }
 
-    if (curr != pc17_idle_level)
+    /* 3. 迟滞漏桶积分器 (Leaky Integrator):
+     * 电平偏离空闲基准时快速累加，恢复基准时逐步衰减。
+     * 彻底解决简单线性计数器被偶发 USB 数据包瞬间“清零”而导致的按键不灵敏与漏检问题！ */
+    if (curr != s_pc17_idle_level)
     {
-        /* 偏离稳态基准，判定为按键被按下 */
-        if (pc17_press_count < 1000)
-            pc17_press_count++;
-
-        /* 持续超过 1 秒 (100 个 10ms tick) 未恢复，视为外部静态电平变更(如USB插入拔出)，自适应更新基准 */
-        if (pc17_press_count > 100)
+        if (s_pc17_integrator < 8)
         {
-            pc17_idle_level = curr;
-            pc17_press_count = 0;
-            pc17_released = 1;
+            s_pc17_integrator++;
+        }
+        s_pc17_hold_ticks++;
+
+        /* 持续超过 1.5 秒 (150 个 10ms 周期) 仍未恢复，判定为外部硬件常态变化(如USB线插拔改变了常态电平)，自适应迁移基准 */
+        if (s_pc17_hold_ticks > 150)
+        {
+            s_pc17_idle_level = curr;
+            s_pc17_integrator = 0;
+            s_pc17_pressed    = 0;
+            s_pc17_hold_ticks = 0;
         }
     }
     else
     {
-        /* 恢复为稳态基准，判定为按键释放 */
-        if (pc17_press_count >= 2 && pc17_press_count <= 60 && pc17_released)
+        if (s_pc17_integrator > 0)
         {
-            /* 按下持续 20ms ~ 600ms，识别为有效单击 */
-            event = KEY_EVENT_CLICK;
+            s_pc17_integrator--;
         }
-        pc17_press_count = 0;
-        pc17_released = 1;
+        s_pc17_hold_ticks = 0;
+    }
+
+    /* 4. 双门限迟滞判决 (Hysteresis Decision):
+     * 积分累积 >= 3 (人手有效按压约 30ms) 锁定进入按下态；
+     * 积分衰减至 0 确认按键完全释放，立即触发一次灵敏、干净的单击事件！ */
+    if (s_pc17_integrator >= 3)
+    {
+        s_pc17_pressed = 1;
+    }
+    else if (s_pc17_integrator == 0 && s_pc17_pressed)
+    {
+        s_pc17_pressed = 0;
+        event = KEY_EVENT_CLICK;
     }
 
     return event;
