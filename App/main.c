@@ -112,6 +112,14 @@ int main(void)
         wui_page_ui_update();
         wui_page_ui_loop();
         USB_CDC_Poll();
+
+        KeyEvent_t pc17_boot_key = Key_PC17_Scan();
+        if (pc17_boot_key == KEY_EVENT_CLICK)
+        {
+            uint8_t new_bl = Backlight_CycleBrightness();
+            printf("[KEY] PC17 Click -> Backlight Level: %d%%\r\n", (int)new_bl);
+        }
+
         Delay_Ms(10);
     }
 
@@ -136,6 +144,14 @@ int main(void)
         if (key != KEY_EVENT_NONE)
         {
             Handle_Key_Event(key);
+        }
+
+        /* PC17 复用按键扫描: 单击循环切换 3 个背光挡位 (100% -> 60% -> 20% -> 100%) */
+        KeyEvent_t pc17_key = Key_PC17_Scan();
+        if (pc17_key == KEY_EVENT_CLICK)
+        {
+            uint8_t new_bl = Backlight_CycleBrightness();
+            printf("[KEY] PC17 Click -> Backlight Level: %d%%\r\n", (int)new_bl);
         }
 
         /* 100ms 任务: 传感器采集并将光强、姿态、X,Y,Z 及背光数据更新到 Page2 控件 */

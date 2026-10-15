@@ -11,6 +11,7 @@
 void Backlight_Init(void);
 void Backlight_SetBrightness(uint8_t percent); /* 0 - 100 */
 uint8_t Backlight_GetBrightness(void);
+uint8_t Backlight_CycleBrightness(void);       /* 3个挡位循环切换 (100% -> 60% -> 20% -> 100%) */
 void Backlight_On(void);
 void Backlight_Off(void);
 

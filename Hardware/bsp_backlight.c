@@ -87,3 +87,23 @@ void Backlight_Off(void)
 {
     Backlight_SetBrightness(0);
 }
+
+/* 3 个循环亮度挡位: 100% (高亮), 60% (中亮), 20% (暗光) */
+static const uint8_t s_brightness_levels[3] = {100, 60, 20};
+static uint8_t       s_level_index = 0;
+
+uint8_t Backlight_CycleBrightness(void)
+{
+    if (s_brightness == 0)
+    {
+        /* 若当前处于关闭状态，直接恢复当前挡位亮度点亮 */
+        Backlight_SetBrightness(s_brightness_levels[s_level_index]);
+    }
+    else
+    {
+        /* 循环切换下一挡位: 100% -> 60% -> 20% -> 100% */
+        s_level_index = (s_level_index + 1) % 3;
+        Backlight_SetBrightness(s_brightness_levels[s_level_index]);
+    }
+    return s_brightness;
+}

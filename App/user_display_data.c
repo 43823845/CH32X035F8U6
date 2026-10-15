@@ -289,7 +289,6 @@ void wui_page_page_3_update_data(uint32_t tap_single, uint32_t tap_double, uint3
 /* 由主循环按 100ms 周期调用, 完成 Page4 光敏与波长显示刷新 */
 void wui_page_page_4_update_data(float lux, uint8_t bl_percent)
 {
-    (void)bl_percent;
     int32_t lux_i = (int32_t)lux;
     if (lux_i < 0) lux_i = 0;
     int32_t lux_d = (int32_t)((lux - (float)lux_i) * 10.0f);
@@ -299,7 +298,7 @@ void wui_page_page_4_update_data(float lux, uint8_t bl_percent)
     snprintf(s_lux_str, sizeof(s_lux_str), "Lux:%ld.%ld", (long)lux_i, (long)lux_d);
     wui_widget_simplestring_set_str(WUI_P4_WIDGET_LUX, s_lux_str);
 
-    /* 2. component_002 (波长): LTR-308 匹配人眼明视觉仿生滤光，峰值感度中心波长为 555nm (可见光 VIS) */
-    snprintf(s_lumen_str, sizeof(s_lumen_str), "Wave:555nm (VIS)");
+    /* 2. component_002 (波长与背光): LTR-308 555nm (VIS) 与当前背光占空比 */
+    snprintf(s_lumen_str, sizeof(s_lumen_str), "555nm BL:%d%%", (int)bl_percent);
     wui_widget_simplestring_set_str(WUI_P4_WIDGET_LUMEN, s_lumen_str);
 }
