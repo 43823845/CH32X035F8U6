@@ -11,6 +11,7 @@
 void Backlight_Init(void);
 void Backlight_SetBrightness(uint8_t percent); /* 0 - 100 */
 uint8_t Backlight_GetBrightness(void);
+void Backlight_On(void);
 void Backlight_Off(void);
 
 #endif /* __BSP_BACKLIGHT_H */

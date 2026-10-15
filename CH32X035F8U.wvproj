@@ -8,13 +8,16 @@
 			"toolchain": "RISC-V",
 			"series": "CH32X035",
 			"rtos": "NoneOS",
-			"mcu": "CH32X035F8U6",
+			"mcu": "CH32X035F8U",
 			"description": "Website: https://www.wch.cn/products/CH32X035.html?\\nROM(byte): 62K, SRAM(byte): 20K, CHIP PINS: 20, GPIO PORTS: 19.\\nWCH CH32X035 series of mainstream MCUs covers the needs of a large variety of applications in the industrial,medical and consumer markets. High performance with first-class peripherals and low-power,low-voltage operation is paired with a high level of integration at accessible prices with a simple architecture and easy-to-use tools.",
 			"tempratureScope": "CH32X035F8U6{-40℃~85℃}",
+			"artifactType": "executable",
 			"link": "WCH-Link",
 			"peripheral_version": "2.1",
 			"calibrateSupport": false,
+			"calibrateCommand": "",
 			"UIConfigSupport": false,
+			"UIConfigCommand": "",
 			"externalFlashSupport": false
 		},
 		"linkedFolders": [],
@@ -23,6 +26,11 @@
 				"parentLogicPath": "",
 				"type": "file",
 				"name": "*.wvproj"
+			},
+			{
+				"parentLogicPath": "wui",
+				"type": "file",
+				"name": "libwui_0.2.a"
 			}
 		],
 		"projectName": "CH32X035F8U",
@@ -128,11 +136,10 @@
 						"include_paths": [
 							"${project}/Debug",
 							"${project}/Core",
-							"${project}/User",
 							"${project}/Peripheral/inc",
-							"${project}/Driver",
-							"${project}/Bsp",
+							"${project}/Hardware",
 							"${project}/App",
+							"${project}/WCHGUIProject/generated",
 							"${project}/WCHGUIProject/generated/wui_user",
 							"${project}/wui_port",
 							"${project}/wui"
@@ -209,8 +216,12 @@
 						"omit_all_symbol_information": false
 					},
 					"libraries": {
-						"libraries": [],
-						"library_search_path": []
+						"libraries": [
+							"wui_0.2"
+						],
+						"library_search_path": [
+							"${project}/wui"
+						]
 					},
 					"miscellaneous": {
 						"picolibc": "disabled",
@@ -243,8 +254,12 @@
 						"omit_all_symbol_information": false
 					},
 					"libraries": {
-						"libraries": [],
-						"library_search_path": []
+						"libraries": [
+							"wui_0.2"
+						],
+						"library_search_path": [
+							"${project}/wui"
+						]
 					},
 					"miscellaneous": {
 						"picolibc": "disabled",
@@ -328,7 +343,7 @@
 		"address": "0x08000000",
 		"target_path": "obj/CH32X035F8U.hex",
 		"clkSpeed": "High",
-		"debug_interface_mode": "1-wire serial",
+		"debug_interface_mode": "",
 		"erase": true,
 		"program": true,
 		"verify": true,
@@ -407,7 +422,7 @@
 			"showDebugOutputTimestamps": true
 		},
 		"reserve": {
-			"PROGRAM_NAME": "obj\\CH32X035F8U.elf",
+			"PROGRAM_NAME": "obj/CH32X035F8U.elf",
 			"PROJECT_ATTR": "CH32X035F8U",
 			"PROJECT_BUILD_CONFIG_AUTO_ATTR": true,
 			"PROJECT_BUILD_CONFIG_ID_ATTR": "",

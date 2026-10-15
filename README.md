@@ -16,9 +16,9 @@
 | **Pin 4** | `PA2` (K1) | 用户按键 SW2 | 板载 10kΩ 上拉电阻 (R13) + 100nF 滤波电容 (C10)，按下为低电平 |
 | **Pin 5** | `PA3` (BL) | TFT 屏幕背光调节 | 驱动 DTC143ZE (U5) 偏置三极管控制 LEDK；支持 **TIM2_CH4 PWM 调光** / GPIO |
 | **Pin 6** | `PA4` (TRES) | TFT 屏幕复位 (Reset) | 通用推挽输出 (GPIO_Mode_Out_PP)，低电平复位 |
-| **Pin 7** | `PA5` (TSCL) | TFT 屏幕 SPI 时钟 (SCL) | **硬件 SPI1_SCK** 复用推挽输出 (24MHz 高速传输，主频 48MHz/2) |
+| **Pin 7** | `PA5` (TSCL) | TFT 屏幕 SPI 时钟 (SCL) | **硬件 SPI1_SCK** 复用推挽输出 (36MHz 高速传输) |
 | **Pin 8** | `PA6` (TRS) | TFT 屏幕 数据/命令选择 (DC) | 通用推挽输出 (GPIO_Mode_Out_PP)，高电平数据，低电平命令 |
-| **Pin 9** | `PA7` (TSDA) | TFT 屏幕 SPI 数据 (MOSI) | **硬件 SPI1_MOSI** 复用推挽输出 (24MHz 高速传输，主频 48MHz/2) |
+| **Pin 9** | `PA7` (TSDA) | TFT 屏幕 SPI 数据 (MOSI) | **硬件 SPI1_MOSI** 复用推挽输出 (36MHz 高速传输) |
 | **Pin 10** | `PB0` (SDA) | I2C 总线数据线 (SDA) | 连接 LTR-308 与 LIS2DW12，板载 4.7kΩ 上拉 (R7)，模拟开漏时序 |
 | **Pin 11** | `PB1` (SCL) | I2C 总线时钟线 (SCL) | 连接 LTR-308 与 LIS2DW12，板载 4.7kΩ 上拉 (R6)，推挽输出时钟 |
 | **Pin 12** | `PB3` | 未使用 | 悬空引脚 |
@@ -47,7 +47,7 @@ CH32X035F8U/
 │   └── ch32x035_conf.h                         # 固件库外设头文件使能配置
 ├── Hardware/                                   # 硬件驱动层 (传感器/屏幕/外设总线/USB-CDC 收拢)
 │   ├── soft_i2c.h / soft_i2c.c                 # 模拟 I2C 驱动 (PB0-SDA, PB1-SCL)，标准开漏时序与超时检测
-│   ├── spi_driver.h / spi_driver.c             # 硬件 SPI1 驱动 (PA5-SCK, PA7-MOSI)，24MHz 寄存器级高速直通传输
+│   ├── spi_driver.h / spi_driver.c             # 硬件 SPI1 驱动 (PA5-SCK, PA7-MOSI)，36MHz 高速传输
 │   ├── usb_cdc.h / usb_cdc.c                   # USB-CDC 虚拟串口驱动 (PC16-DM, PC17-DP 启动后重映射为调试串口)
 │   ├── lis2dw12.h / lis2dw12.c                 # LIS2DW12TR 三轴加速度计驱动 (I2C: 0x19, 14-bit 高性能, INT1 使能)
 │   ├── ltr308.h / ltr308.c                     # LTR-308ALS-01 环境光传感器驱动 (I2C: 0x53, 3X增益, INT2 使能)
@@ -113,7 +113,7 @@ void wui_page_page_2_update_data(float lux, float pitch, float roll, float ax, f
 - **姿态解算**：基于重力分量三角函数实时解算 Pitch / Roll 角。
 
 ### 4.3 0.96 寸彩色 TFT 屏：ST7735S 与 WCHGUI 移植
-- **接口**：硬件 SPI1（PA5: SCK, PA7: MOSI），24MHz 传输主频（48MHz/2）。
+- **接口**：硬件 SPI1（PA5: SCK, PA7: MOSI），36MHz 传输主频。
 - **坐标修正**：横屏模式（160×80），Offset 校准为 $X=1, Y=26$。
 - **HAL 移植**：`wui_port.c` 实现了标准 `wui_hal_t`，通过 `memcpy` 直接从片内 Flash 数组 `wui_internal_data` 读取开机图片，由 WCHGUI 静态库驱动无闪烁渲染。
 
@@ -149,12 +149,9 @@ void wui_page_page_2_update_data(float lux, float pitch, float roll, float ax, f
   - 传感器完成光强积分转换后拉低引脚，由 MCU 侧 `EXTI_Line1` 下降沿中断捕获并累加计数器。
 - **中断控制器 (PFIC)**：
   - 统一映射至青稞 RISC-V 快速中断通道 `EXTI7_0_IRQn`（抢占 1，子优先级 1），保证微秒级低延迟响应；
-  - 提供 `Bsp_Int_Snapshot()` 单次原子快照以及 `Bsp_Int_GetInt1Count()`、`Bsp_Int_GetInt2Count()`、`Bsp_Int_GetInt1Flag()` 等统一数据接口供业务层查询。
+  - 提供 `Bsp_Int_GetInt1Count()`、`Bsp_Int_GetInt2Count()`、`Bsp_Int_GetInt1Flag()` 等统一数据接口供业务层查询。
 
-### 4.7 系统鲁棒性与性能深度优化设计 (Industrial-Grade Performance & Robustness)
-- **SPI 寄存器级高速总线驱动**：`SPI1_WriteBuffer` 消除逐字节固件库函数调用开销，直接寄存器操作使高频刷屏效率倍增；
-- **GUI 零冗余重绘 (Diff Change Detection)**：Page 2 数据控件仅在显示字符串发生实质变更时触发重绘，在静止/恒定状态下大幅节省 CPU 与 SPI 总线负载；
-- **整型快速格式化**：避免标准浮点格式化（`dtoa`）的巨大运行时与堆栈开销，提高帧率响应；
+### 4.7 系统鲁棒性与异常防护设计 (Industrial-Grade Robustness)
 - **软件 I2C 总线原子操作与防死锁**：SCL/SDA 引脚采用直接寄存器位带原子置位，`Soft_I2C_WaitAck()` 内置微秒延时与 400µs 宽容限超时保护，杜绝从机掉线或总线干扰导致的无限等待；
 - **SPI 传输故障安全保护 (Failsafe)**：所有硬件 SPI 标志位（`TXE`、`BSY`）等待循环均加入 `SPI_TIMEOUT_COUNT` 边界计数器，防止因时钟异常造成单片机硬卡死；
 - **USB CDC 临界区并发保护**：主线程 `SendBuffer` 与 USB 中断例程 `USBFS_IRQHandler` 操作环形缓冲区时，采用 `NVIC_DisableIRQ(USBFS_IRQn)` 临界区原子锁定，彻底杜绝数据乱序与重入冲突；
@@ -181,10 +178,10 @@ make all
 ### 5.2 资源占用情况 (RISC-V GCC rv32imacxw -Os)
 ```text
    text    data     bss     dec     hex filename
-  41016     200    7376   48592    bdd0 CH32X035F8U.elf
+  40968     328    7520   48816    beb0 CH32X035F8U.elf
 ```
-- **Flash (Text + Data)**：**41.22 KB** / 62 KB (占用率约 **66.5%**)
-- **SRAM (Data + BSS)**：**7.40 KB** / 20 KB (占用率约 **37.0%**，包含 WCHGUI 3KB 独立运行堆区与 USB CDC 缓冲区)
+- **Flash (Text + Data)**：**41.30 KB** / 62 KB (占用率约 **66.6%**)
+- **SRAM (Data + BSS)**：**7.66 KB** / 20 KB (占用率约 **38.3%**，包含 WCHGUI 3KB 独立运行堆区与 USB CDC 缓冲区)
 - 生成固件位于：
   - `obj/CH32X035F8U.elf`
   - `obj/CH32X035F8U.hex`
@@ -202,4 +199,39 @@ make all
 #### WCH-Link 仿真器烧录 (SWD 模式)
 1. 将 WCH-Link 模块的 SWDIO、SWCLK、GND、3V3 分别连接至板载对应的测试点或 Type-C 引脚；
 2. 在 MounRiver Studio Ⅱ 中点击工具栏 **Download** 按钮直接烧录并支持单步硬件仿真。
+
+---
+
+## 6. 版本更新记录 (Changelog)
+
+### [2026-10-15] USB CDC 虚拟串口驱动全面重构与故障彻底修复
+
+#### 1. 故障现象记录
+* **现象一**：串口可以正常打开，但在上位机（如 SSCOM）中点击“关闭串口”时上位机出现长时间卡死（约 5~10 秒），Windows 驱动句柄无法释放；
+* **现象二**：重新插拔 USB 数据线时，Windows 设备管理器有较大概率报错 `未知 USB 设备 (设备描述符请求失败)`，端口状态为 `Code 43`（位置标为 `Port_#0002.Hub_#0001`）；
+* **现象三**：设备管理器中虚拟串口始终显示为通用的 `USB 串行设备 (COMx)`，自定义的产品名称未在顶层设备列表中直接体现。
+
+#### 2. 根因分析 (Root Cause Analysis)
+经过深度对照沁恒官方标准例程（`EXAM/USB/USBFS/DEVICE/SimulateCDC`），确认了导致上述问题的四大根本原因：
+1. **D+ 上拉阻抗严重失配与引脚未初始化（导致 Code 43 描述符请求失败）**：
+   * 原驱动未对 PC16 (UDM) 和 PC17 (UDP) 执行标准 GPIO 模式初始化（应分别为浮空输入与上拉输入）；
+   * 在 AFIO 控制寄存器中，仅设置了 `AFIO_CTLR_UDP_PUE_1`（`0x08`），实际上配置成了 **10kΩ 弱上拉**，导致 D+ 上拉阻抗过大（USB 2.0 规范强制要求 $1.5\text{k}\Omega \pm 5\%$）。这造成 D+ 高电平仅约 2.0V，信号质量恶化，USB 主机/集线器在初期握手阶段检测到眼图畸变与帧错误，直接宣告“设备描述符请求失败”；
+2. **静态序列号引起的 Windows 注册表实例冲突**：
+   * 原代码在设备描述符中提供了静态序列号字符串（`20261010`），Windows PnP 管理器在首次插入时为其生成了固化的 `USB\VID_1A86&PID_FE0C\20261010` 注册表实例并绑定了特定 COM 端口；在重复插拔或异常断开后，该静态键值与新握手产生冲突。官方规范明确要求 `iSerialNumber = 0`，让 Windows 根据物理接口动态即时分配端口；
+3. **控制传输未支持请求的 STALL 握手缺失**：
+   * Windows 在枚举期间会探测 BOS 描述符（`0x0F`）、设备限定符（`0x06`）及 MS 描述符等扩展信息。原代码在遇到不支持的请求时回退到默认分支发送了 0 字节 DATA1 成功包。根据 USB 2.0 规范，未支持的控制读请求必须返回 `STALL`，否则上位机因收到非法长度数据直接熔断枚举并报错；
+4. **上位机关闭串口时的 Bulk IN 传输挂起死锁**：
+   * 当用户点击 SSCOM“关闭串口”时，Windows `usbser.sys` 发送 `CDC_SET_LINE_CTLSTE (DTR=0)` 并等待 Bulk IN 传输句柄中止。若 MCU 仍将端点 3 置于 ACK 握手状态或 `busy` 标志未被清空，主机驱动会陷入长时间内核态等待（表现为 SSCOM 假死）。必须在收到 DTR=0 时立即将端点 3 强制置为 NAK、清除 busy 标志并排空发送环形队列。
+
+#### 3. 架构整改与优化措施
+* **全面对齐官方 SimulateCDC 核心状态机**：
+  * 重构 [usb_cdc.c](file:///c:/Users/Lenovo/Desktop/CH32X035F8U6-main/Hardware/usb_cdc.c)，恢复官方标准的 `USBFS_Device_Endp_Init()` 与分级 SETUP 请求解析，引入严谨的 `errflag` 机制，对不支持的请求规范返回 STALL；
+  * 恢复标准引脚配置：PC16 浮空输入，PC17 上拉输入；AFIO 上拉模式恢复为 `AFIO_CTLR_UDP_PUE`（`0x0C`，开启片内精准 1.5kΩ 上拉）；
+  * 设备描述符对齐官方：`iSerialNumber = 0`，杜绝注册表固化冲突；
+* **断开即时保护与无感非阻塞调试输出**：
+  * 在 `CDC_SET_LINE_CTLSTE` 收到 DTR=0 时，立即复位端点 3 状态并清空 1024 字节环形队列，实现上位机“秒开秒关”绝不卡顿；
+  * `USB_CDC_SendBuffer` 采用覆盖最旧字节的环形队列，系统主循环与 `printf` 完全解耦，插拔 USB 或串口未打开时绝对不阻塞主线程运行；
+* **配套生成设备管理器名称映射文件**：
+  * 根目录新增轻量级描述文件 [ch32x035_cdc.inf](file:///c:/Users/Lenovo/Desktop/CH32X035F8U6-main/ch32x035_cdc.inf)，继承自 Windows 自带且免签名的 `usbser.inf`。用户右键“安装”后，设备管理器最外层端口名称直接显示为 `CH32X035 姿态与光强传感器监控端口 (COMx)`。
+
 

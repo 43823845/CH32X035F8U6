@@ -1,0 +1,42 @@
+; ==============================================================================
+; CH32X035 USB CDC 虚拟串口驱动描述文件 (.inf)
+; 作用: 使 Windows 设备管理器将端口直接显示为自定义产品名称，而非通用的 "USB 串行设备"
+; 底层使用 Windows 原生自带并经过微软数字签名的 usbser.sys，无需额外拷贝任何 sys 驱动文件
+; ==============================================================================
+
+[Version]
+Signature   = "$Windows NT$"
+Class       = Ports
+ClassGuid   = {4d36e978-e325-11ce-bfc1-08002be10318}
+Provider    = %ManufacturerName%
+DriverVer   = 10/15/2026,1.0.0.0
+
+[Manufacturer]
+%ManufacturerName% = DeviceList,NTamd64,NTx86,NTarm64
+
+[DeviceList.NTamd64]
+%DeviceName% = DriverInstall, USB\VID_1A86&PID_FE0C
+
+[DeviceList.NTx86]
+%DeviceName% = DriverInstall, USB\VID_1A86&PID_FE0C
+
+[DeviceList.NTarm64]
+%DeviceName% = DriverInstall, USB\VID_1A86&PID_FE0C
+
+; ------------------------------------------------------------------------------
+; 安装节: 继承 Windows 自带的 usbser.inf 驱动程序
+; ------------------------------------------------------------------------------
+[DriverInstall.NT]
+Include = usbser.inf
+Needs   = UsbSerial_Install.NT
+
+[DriverInstall.NT.Services]
+Include = usbser.inf
+Needs   = UsbSerial_Install.NT.Services
+
+; ------------------------------------------------------------------------------
+; 自定义字符串节 (可在此自由修改显示名称)
+; ------------------------------------------------------------------------------
+[Strings]
+ManufacturerName = "WCH"
+DeviceName       = "CH32X035 姿态与光强传感器监控端口"

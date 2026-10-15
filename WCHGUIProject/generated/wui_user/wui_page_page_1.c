@@ -1,9 +1,13 @@
-#include "wui_page_page_1.h"
+#include "wui_user/wui_page_page_1.h"
+
+// ================= Key Handler =================
 
 static void page_1_on_key(uint32_t key)
 {
     (void)key;
 }
+
+// ================= Page Functions =================
 
 void wui_page_page_1_init(void)
 {

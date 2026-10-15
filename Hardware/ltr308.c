@@ -2,6 +2,8 @@
 #include "soft_i2c.h"
 #include "debug.h"
 
+static LTR308_Gain_t s_current_gain = LTR308_GAIN_3X;
+
 bool LTR308_Init(void)
 {
     uint8_t part_id = 0;
@@ -23,7 +25,8 @@ bool LTR308_Init(void)
     }
 
     /* 设置增益: 3X */
-    I2C_WriteReg(LTR308_I2C_ADDR, LTR308_REG_GAIN, LTR308_GAIN_3X);
+    s_current_gain = LTR308_GAIN_3X;
+    I2C_WriteReg(LTR308_I2C_ADDR, LTR308_REG_GAIN, (uint8_t)s_current_gain);
 
     /* 设置测量速率: 100ms 积分时间, 100ms 重复率 (0x22) */
     I2C_WriteReg(LTR308_I2C_ADDR, LTR308_REG_MEAS_RATE, 0x22);
@@ -78,14 +81,45 @@ uint32_t LTR308_ReadRaw(void)
     return raw;
 }
 
+bool LTR308_SetGain(LTR308_Gain_t gain)
+{
+    s_current_gain = gain;
+    return (I2C_WriteReg(LTR308_I2C_ADDR, LTR308_REG_GAIN, (uint8_t)s_current_gain) == 0);
+}
+
 float LTR308_ReadLux(void)
 {
     uint32_t raw = LTR308_ReadRaw();
 
-    /* 转换公式: Lux = (0.6 * raw) / (Gain * (IntegTime / 100ms))
-     * 当前配置: Gain = 3X, IntegTime = 100ms
-     * 则 Lux = (0.6 * raw) / 3.0 = 0.2 * raw = raw / 5.0
+    /* 转换公式: Lux = (0.6 * raw) / (Gain * INT)
+     * 当前积分时间: 100ms (18-bit, INT = 1.0)
+     * 增益换算:
+     * 1X:  Gain=1.0,  最大测量上限 = 157,285 Lux (覆盖户外正午烈日)
+     * 3X:  Gain=3.0,  最大测量上限 = 52,428 Lux  (室内高精度)
+     * 6X:  Gain=6.0,  最大测量上限 = 26,214 Lux
+     * 9X:  Gain=9.0,  最大测量上限 = 17,476 Lux
+     * 18X: Gain=18.0, 最大测量上限 = 8,738 Lux
      */
-    float lux = (float)raw * 0.2f;
+    float gain_div = 1.0f;
+    if (s_current_gain == LTR308_GAIN_3X)       gain_div = 3.0f;
+    else if (s_current_gain == LTR308_GAIN_6X)  gain_div = 6.0f;
+    else if (s_current_gain == LTR308_GAIN_9X)  gain_div = 9.0f;
+    else if (s_current_gain == LTR308_GAIN_18X) gain_div = 18.0f;
+
+    float lux = (0.6f * (float)raw) / gain_div;
+
+    /* 动态自动增益切换 (Auto-Ranging):
+     * 1) 若处于 3X 增益且光强接近饱和 (raw >= 240000, 相当于 >48000 Lux), 自动下调为 1X 增益拓展量程至 157,285 Lux!
+     * 2) 若处于 1X 增益且光强回落 (raw < 60000, 相当于 <36000 Lux), 自动切回 3X 增益提升室内分辨率!
+     */
+    if (s_current_gain == LTR308_GAIN_3X && raw >= 240000)
+    {
+        LTR308_SetGain(LTR308_GAIN_1X);
+    }
+    else if (s_current_gain == LTR308_GAIN_1X && raw < 60000)
+    {
+        LTR308_SetGain(LTR308_GAIN_3X);
+    }
+
     return lux;
 }

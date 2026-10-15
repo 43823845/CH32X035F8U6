@@ -18,25 +18,43 @@
 #include "wui_page.h"
 #include "wui_page_page_1.h"
 #include "wui_page_page_2.h"
+#include "wui_page_page_3.h"
+#include "wui_page_page_4.h"
 
-static const uint8_t s_bl_levels[] = {100, 75, 50, 25, 10};
-static uint8_t s_bl_index = 0;
+/* 用户显示控制逻辑 (实现位于 user_display_data.c) */
+void user_display_attitude_update(float ax, float ay, float az);
+void user_display_reset_cube(void);
+void wui_page_page_2_update_data(float pitch, float roll,
+                                 float ax, float ay, float az);
+void wui_page_page_3_update_data(uint32_t tap_single, uint32_t tap_double,
+                                 uint32_t ff_count, bool ff_recent);
+void wui_page_page_4_update_data(float lux, uint8_t bl_percent);
+
+/* 当前显示页, 上电默认 Page1 */
+static wui_page_t s_cur_page = WUI_PAGE_1;
 
 static void Handle_Key_Event(KeyEvent_t key)
 {
     if (key == KEY_EVENT_CLICK)
     {
-        /* 单击循环调节背光档位 */
-        s_bl_index = (s_bl_index + 1) % (sizeof(s_bl_levels) / sizeof(s_bl_levels[0]));
-        Backlight_SetBrightness(s_bl_levels[s_bl_index]);
-    }
-    else if (key == KEY_EVENT_LONG_PRESS)
-    {
-        /* 长按开关背光 */
-        if (Backlight_GetBrightness() > 0)
-            Backlight_Off();
-        else
-            Backlight_SetBrightness(s_bl_levels[s_bl_index]);
+        /* 仅在 Page2/Page3/Page4 状态下响应循环切页: 开机 Page1 展示期按键无效 */
+        if (s_cur_page == WUI_PAGE_2)
+        {
+            user_display_reset_cube();
+            s_cur_page = WUI_PAGE_3;
+            wui_page_switch((uint16_t)WUI_PAGE_3);
+        }
+        else if (s_cur_page == WUI_PAGE_3)
+        {
+            s_cur_page = WUI_PAGE_4;
+            wui_page_switch((uint16_t)WUI_PAGE_4);
+        }
+        else if (s_cur_page == WUI_PAGE_4)
+        {
+            user_display_reset_cube();
+            s_cur_page = WUI_PAGE_2;
+            wui_page_switch((uint16_t)WUI_PAGE_2);
+        }
     }
 }
 
@@ -56,7 +74,7 @@ int main(void)
     USB_CDC_Init();
 
     printf("\r\n========================================\r\n");
-    printf("  CH32X035 Sensor Monitor (INT1/2 Ready)  \r\n");
+    printf("  CH32X035F8U6 Sensor Monitor (INT1/2 Ready)  \r\n");
     printf("========================================\r\n");
 
     /* 2. 初始化 WCHGUI 框架并显示 Page1 (初始化欢迎页) */
@@ -75,8 +93,8 @@ int main(void)
     /* 3. 系统硬件初始化与传感器自检 */
     App_Sensor_Init();
 
-    /* 开机画面停留展示约 1.2 秒 */
-    for (int i = 0; i < 120; i++)
+    /* 开机画面 (Page1) 停留展示约 2 秒 */
+    for (int i = 0; i < 200; i++)
     {
         wui_page_ui_tick(10);
         wui_page_ui_update();
@@ -84,7 +102,8 @@ int main(void)
         Delay_Ms(10);
     }
 
-    /* 4. 系统硬件正常后，切换到 Page2 (传感器数据监控页) */
+    /* 4. Page1 展示 2 秒后切换到 Page2 (传感器数据监控页) */
+    s_cur_page = WUI_PAGE_2;
     wui_page_switch(WUI_PAGE_2);
 
     uint32_t tick_count = 0;
@@ -111,27 +130,60 @@ int main(void)
         {
             App_Sensor_Update();
             const App_SensorData_t *data = App_Sensor_GetData();
-            wui_page_page_2_update_data(
-                data->lux,
-                data->pitch,
-                data->roll,
-                data->acc_x,
-                data->acc_y,
-                data->acc_z,
-                Backlight_GetBrightness()
-            );
 
-            /* 每 500ms 向上位机串口助手输出一次结构化调试信息 (整型快速输出，避免浮点格式化膨胀与异常) */
+            /* 姿态判定每周期只更新一次, Page2/Page3 共用判定结果 */
+            user_display_attitude_update(data->acc_x, data->acc_y, data->acc_z);
+
+            /* 控件 ID 为页内序号, Page2/Page3/Page4 存在重号, 仅刷新当前活动页 */
+            if (s_cur_page == WUI_PAGE_2)
+            {
+                wui_page_page_2_update_data(
+                    data->pitch,
+                    data->roll,
+                    data->acc_x,
+                    data->acc_y,
+                    data->acc_z
+                );
+            }
+            else if (s_cur_page == WUI_PAGE_3)
+            {
+                wui_page_page_3_update_data(
+                    data->tap_single_count,
+                    data->tap_double_count,
+                    data->ff_count,
+                    data->ff_recent
+                );
+            }
+            else if (s_cur_page == WUI_PAGE_4)
+            {
+                wui_page_page_4_update_data(
+                    data->lux,
+                    Backlight_GetBrightness()
+                );
+            }
+
+            /* 每 500ms 向上位机串口助手输出一次结构化调试信息 (定点数格式化，完美兼容 nano-printf) */
             if (tick_count % 50 == 0)
             {
-                int lux_int = (int)data->lux;
-                int lux_frac = (int)((data->lux - (float)lux_int) * 10.0f);
-                if (lux_frac < 0) lux_frac = -lux_frac;
-                printf("[DEBUG] Lux:%4d.%01d | P:%3d R:%3d | X:%4d Y:%4d Z:%4d | BL:%3d%% | INT1:%lu INT2:%lu\r\n",
-                       lux_int, lux_frac,
-                       (int)data->pitch, (int)data->roll,
-                       (int)data->acc_x, (int)data->acc_y, (int)data->acc_z,
-                       Backlight_GetBrightness(),
+                int32_t lux_i = (int32_t)data->lux;
+                int32_t lux_d = (int32_t)((data->lux - (float)lux_i) * 10.0f);
+                if (lux_d < 0) lux_d = -lux_d;
+
+                int32_t pitch_i = (int32_t)data->pitch;
+                int32_t roll_i  = (int32_t)data->roll;
+                int32_t ax_i    = (int32_t)data->acc_x;
+                int32_t ay_i    = (int32_t)data->acc_y;
+                int32_t az_i    = (int32_t)data->acc_z;
+
+                printf("[DEBUG] Lux:%ld.%ld | P:%ld R:%ld | X:%ld Y:%ld Z:%ld | BL:%d%% | TAP:%lu/%lu FF:%lu(%d) | INT1:%lu INT2:%lu\r\n",
+                       (long)lux_i, (long)lux_d,
+                       (long)pitch_i, (long)roll_i,
+                       (long)ax_i, (long)ay_i, (long)az_i,
+                       (int)Backlight_GetBrightness(),
+                       (unsigned long)data->tap_single_count,
+                       (unsigned long)data->tap_double_count,
+                       (unsigned long)data->ff_count,
+                       (int)data->ff_recent,
                        (unsigned long)data->int1_count,
                        (unsigned long)data->int2_count);
             }

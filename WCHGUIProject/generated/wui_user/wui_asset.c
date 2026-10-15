@@ -12,13 +12,13 @@ const wui_bitfont_t wui_font_8x16 = { 8, 16, 0x20, 95, (const uint8_t*)asc2_1608
 /* Maps string IDs to string pointers */
 static const char* wui_string_table[WUI_STR_COUNT] = {
     [WUI_STR_NONE] = NULL,
-    [WUI_STR_PAGE_1_COMPONENT_003] = "亮度&姿态测试仪 1.0",
-    [WUI_STR_PAGE_2_COMPONENT_006] = "亮度:",
-    [WUI_STR_PAGE_2_COMPONENT_005] = "Z:",
-    [WUI_STR_PAGE_2_COMPONENT_004] = "Y:",
-    [WUI_STR_PAGE_2_COMPONENT_003] = "X:",
-    [WUI_STR_PAGE_2_COMPONENT_002] = "姿态:",
-    [WUI_STR_PAGE_2_COMPONENT_001] = "光强:",
+    [WUI_STR_PAGE_1_COMPONENT_003] = "TESTER v1.0",
+    [WUI_STR_PAGE_2_COMPONENT_004] = "Z:0",
+    [WUI_STR_PAGE_2_COMPONENT_003] = "Y:0",
+    [WUI_STR_PAGE_2_COMPONENT_002] = "X:0",
+    [WUI_STR_PAGE_2_COMPONENT_001] = "Pose:--",
+    [WUI_STR_PAGE_4_COMPONENT_001] = "Lux:0",
+    [WUI_STR_PAGE_4_COMPONENT_002] = "Wave:555nm",
 };
 
 /**

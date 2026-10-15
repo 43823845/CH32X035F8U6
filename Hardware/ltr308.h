@@ -35,6 +35,7 @@ typedef enum {
 
 bool LTR308_Init(void);
 bool LTR308_SetThreshold(uint32_t low_thresh, uint32_t high_thresh);
+bool LTR308_SetGain(LTR308_Gain_t gain);
 uint32_t LTR308_ReadRaw(void);
 float LTR308_ReadLux(void);
 

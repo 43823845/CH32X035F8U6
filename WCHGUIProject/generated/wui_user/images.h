@@ -16,8 +16,10 @@ typedef enum {
     IMAGE_NONE = 0xFFFF,
     // === Raw images (0b000) ===
     IMAGE_TEXT_WUI_PAGE_1_COMPONENT_001 = MAKE_IMAGE_ID(IMAGE_TYPE_RAW, 0),
+    IMAGE_TEXT_WUI_PAGE_3_COMPONENT_002 = MAKE_IMAGE_ID(IMAGE_TYPE_RAW, 1),
+    IMAGE_TEXT_WUI_PAGE_3_COMPONENT_001 = MAKE_IMAGE_ID(IMAGE_TYPE_RAW, 2),
     // === RLE images (0b001) ===
-    IMAGE_IMG_2025_12_24_212900_445 = MAKE_IMAGE_ID(IMAGE_TYPE_RLE, 1),
+    IMAGE_IMG_2025_12_24_212900_445 = MAKE_IMAGE_ID(IMAGE_TYPE_RLE, 3),
 } image_index_t;
 
 static const image_info_t image_table[] = {
@@ -27,6 +29,18 @@ static const image_info_t image_table[] = {
         .height    = 28,
         .data_size = 4312,
     },
+    {  // IMAGE_TEXT_WUI_PAGE_3_COMPONENT_002
+        .addr      = 0x0000170C,
+        .width     = 75,
+        .height    = 22,
+        .data_size = 3300,
+    },
+    {  // IMAGE_TEXT_WUI_PAGE_3_COMPONENT_001
+        .addr      = 0x000023F0,
+        .width     = 75,
+        .height    = 22,
+        .data_size = 3300,
+    },
     {  // IMAGE_IMG_2025_12_24_212900_445
         .addr      = 0x00000000,
         .width     = 50,
@@ -35,11 +49,11 @@ static const image_info_t image_table[] = {
     },
 };
 
-#define RAW_IMAGE_COUNT   1
+#define RAW_IMAGE_COUNT   3
 #define RLE_IMAGE_COUNT   1
 #define CLUT_IMAGE_COUNT  0
 #define CLUT4_IMAGE_COUNT 0
-#define IMAGE_COUNT       2
+#define IMAGE_COUNT       4
 
 static inline const image_info_t* get_image(image_index_t index) {
     uint16_t idx = IMAGE_GET_INDEX(index);

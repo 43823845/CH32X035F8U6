@@ -1,4 +1,5 @@
 #include "wui_port.h"
+#include "wui_page.h"
 #include "st7735.h"
 #include "spi_driver.h"
 #include <string.h>
@@ -86,7 +87,7 @@ void WUI_Port_Init(void)
     wui_init_data_t init_data = {
         .width      = 160,
         .height     = 80,
-        .page_count = 2,
+        .page_count = WUI_PAGE_COUNT,
         .heap_addr  = s_wui_heap,
         .heap_size  = WUI_HEAP_SIZE,
     };

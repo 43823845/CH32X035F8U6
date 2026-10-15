@@ -26,4 +26,18 @@ const wui_page_desc_t wui_pages[WUI_PAGE_COUNT] = {
         .page_loop = wui_page_page_2_loop,
         .user_data = NULL,
     },
+    [WUI_PAGE_3] = {
+        .bg_color = RGB888_TO_RGB565(0, 0, 0),
+        .page_name = "Page3",
+        .page_init = wui_page_page_3_init,
+        .page_loop = wui_page_page_3_loop,
+        .user_data = NULL,
+    },
+    [WUI_PAGE_4] = {
+        .bg_color = RGB888_TO_RGB565(0, 0, 0),
+        .page_name = "Page4",
+        .page_init = wui_page_page_4_init,
+        .page_loop = wui_page_page_4_loop,
+        .user_data = NULL,
+    },
 };
