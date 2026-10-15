@@ -5,7 +5,6 @@ static uint8_t s_last_brightness = 100;
 
 void Backlight_Init(void)
 {
-    GPIO_InitTypeDef        GPIO_InitStruct = {0};
     TIM_TimeBaseInitTypeDef TIM_TimeBaseInitStruct = {0};
     TIM_OCInitTypeDef       TIM_OCInitStruct = {0};
 
