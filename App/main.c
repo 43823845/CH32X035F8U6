@@ -152,6 +152,10 @@ int main(void)
         {
             uint8_t new_bl = Backlight_CycleBrightness();
             printf("[KEY] PC17 Click -> Backlight Level: %d%%\r\n", (int)new_bl);
+            if (s_cur_page == WUI_PAGE_4)
+            {
+                wui_page_page_4_update_data(App_Sensor_GetData()->lux, new_bl);
+            }
         }
 
         /* 100ms 任务: 传感器采集并将光强、姿态、X,Y,Z 及背光数据更新到 Page2 控件 */

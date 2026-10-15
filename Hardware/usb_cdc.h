@@ -59,4 +59,10 @@ int16_t USB_CDC_ReadByte(void);
  */
 void USB_CDC_Poll(void);
 
+/**
+ * @brief 查询 USB 传输引擎是否处于活跃收发或端点繁忙状态
+ * @return true: 忙碌中; false: 空闲
+ */
+bool USB_CDC_IsBusy(void);
+
 #endif /* __USB_CDC_H */

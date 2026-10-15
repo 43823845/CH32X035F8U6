@@ -323,6 +323,13 @@ void USB_CDC_Poll(void)
     NVIC_EnableIRQ(USBFS_IRQn);
 }
 
+bool USB_CDC_IsBusy(void)
+{
+    if (s_dev_config == 0) return false;
+    return (s_ep_busy[0] != 0 || s_ep_busy[1] != 0 || s_ep_busy[2] != 0 || s_ep_busy[3] != 0 ||
+            ((USBFSD->MIS_ST & USBFS_UMS_SIE_FREE) == 0));
+}
+
 /* ================== USBFS 中断服务例程 (官方核心重构) ================== */
 
 void USBFS_IRQHandler(void) __attribute__((interrupt("WCH-Interrupt-fast")));
