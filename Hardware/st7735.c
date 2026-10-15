@@ -283,3 +283,19 @@ void ST7735_DrawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t co
         }
     }
 }
+
+void ST7735_DrawRGB16Span(uint16_t x, uint16_t y, uint16_t len, const uint16_t *colors)
+{
+    if (x >= s_width || y >= s_height || len == 0 || colors == 0) return;
+    if (x + len > s_width) len = s_width - x;
+
+    ST7735_SetAddressWindow(x, y, x + len - 1, y);
+    DC_DATA();
+    for (uint16_t i = 0; i < len; i++)
+    {
+        uint16_t c = colors[i];
+        SPI1_WriteByte((uint8_t)(c >> 8));
+        SPI1_WriteByte((uint8_t)c);
+    }
+}
+

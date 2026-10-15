@@ -97,140 +97,175 @@ const char* user_display_attitude_text(void)
     return s_orient;
 }
 
-/* ================= 3D 立方体姿态实时线框渲染器 =================
- * 渲染在 Page 2 屏幕右半区域 (Center: X=127, Y=40, 半边长: 13px)
- * 采用"极速双缓冲线段异或/黑底擦除"机制: 仅擦除重画 12 条线段，耗时 < 0.1ms，绝对零闪烁 */
+/* ================= 航空姿态仪 / 仪表级水平地平仪 (Attitude Indicator) =================
+ * 渲染在 Page 2 屏幕右半区域 (X: 94~159, Y: 0~79, 仪表盘中心: X=127, Y=40, 半径 R=26)
+ * 采用专业航空仪表 PFD (Primary Flight Display) 标准视觉设计:
+ * 1. 动态双色天地分界: 经典航空深蓝天空 (Sky) + 暖棕大地 (Ground) + 纯白人工地平线 (Horizon)
+ * 2. 逐行全覆写极速扫描渲染 (Scanline Direct Fill): 纯硬件级刷新, 无重影、无残影、零闪烁
+ * 3. 动态俯仰梯形标尺刻度 (Pitch Ladder): 随滚转与俯仰精准旋转与平移 (±10°, ±20°)
+ * 4. 中央固定飞机基准符号 (Fixed Aircraft Symbol): 经典亮黄双翼与瞄准中轴标
+ * 5. 外圈仪表环与滚转刻度 (Roll Scale): 顶部 12 点钟指引白三角标与 ±30°/±60° 刻度线 */
 
-#define CUBE_CX       127   /* 立方体在横屏 160x80 上的中心 X (完美居中于右半屏 X:95~159 区域) */
-#define CUBE_CY       40    /* 立方体在横屏 160x80 上的中心 Y */
-#define CUBE_SIZE     13.0f /* 半边长 (像素) */
+#define HORIZON_CX       127   /* 仪表盘中心 X */
+#define HORIZON_CY       40    /* 仪表盘中心 Y */
+#define HORIZON_R        26    /* 仪表盘半径 (外径 53 像素, 严密受限于 94~159 区域) */
+#define PITCH_SCALE      0.55f /* 俯仰角像素比例 (像素/度) */
 
-/* 立方体 8 个顶点的局部三维坐标 (以自身质心为原点) */
-static const float s_cube_vertices[8][3] = {
-    {-CUBE_SIZE, -CUBE_SIZE, -CUBE_SIZE}, /* 0: 底面前左 */
-    {+CUBE_SIZE, -CUBE_SIZE, -CUBE_SIZE}, /* 1: 底面前右 */
-    {+CUBE_SIZE, +CUBE_SIZE, -CUBE_SIZE}, /* 2: 底面后右 */
-    {-CUBE_SIZE, +CUBE_SIZE, -CUBE_SIZE}, /* 3: 底面后左 */
-    {-CUBE_SIZE, -CUBE_SIZE, +CUBE_SIZE}, /* 4: 顶面前左 (Z+ 板子正面) */
-    {+CUBE_SIZE, -CUBE_SIZE, +CUBE_SIZE}, /* 5: 顶面前右 (Z+ 板子正面) */
-    {+CUBE_SIZE, +CUBE_SIZE, +CUBE_SIZE}, /* 6: 顶面后右 (Z+ 板子正面) */
-    {-CUBE_SIZE, +CUBE_SIZE, +CUBE_SIZE}, /* 7: 顶面后左 (Z+ 板子正面) */
-};
+/* 航空仪表专用色彩定义 (16-bit RGB565) */
+#define COLOR_AV_SKY       RGB888_TO_RGB565(25, 95, 190)   /* 经典航空天蓝 */
+#define COLOR_AV_GROUND    RGB888_TO_RGB565(130, 65, 18)   /* 经典航空大地暖棕 */
+#define COLOR_AV_BEZEL     RGB888_TO_RGB565(160, 172, 190) /* 外圈仪表刻度环钛银灰 */
+#define COLOR_AV_AIRCRAFT  RGB888_TO_RGB565(255, 215, 0)   /* 中央固定战机符号 (亮金黄) */
 
-/* 立方体 12 条棱边 */
-static const uint8_t s_cube_edges[12][2] = {
-    /* 底面 4 条边 (0..3) */
-    {0, 1}, {1, 2}, {2, 3}, {3, 0},
-    /* 顶面 4 条边 (4..7, Z+ 向上) */
-    {4, 5}, {5, 6}, {6, 7}, {7, 4},
-    /* 连接柱 4 条边 (8..11) */
-    {0, 4}, {1, 5}, {2, 6}, {3, 7}
-};
-
-/* 缓存上一帧的 12 条线段端点坐标，用于极速无痕擦除 */
-static int16_t s_prev_lines[12][4];
-static bool    s_cube_has_prev = false;
-static float   s_last_pitch    = 999.0f;
-static float   s_last_roll     = 999.0f;
+static bool  s_has_prev_attitude = false;
+static float s_last_pitch        = 999.0f;
+static float s_last_roll         = 999.0f;
 
 void user_display_reset_cube(void)
 {
-    s_cube_has_prev = false;
-    s_last_pitch    = 999.0f;
-    s_last_roll     = 999.0f;
+    s_has_prev_attitude = false;
+    s_last_pitch        = 999.0f;
+    s_last_roll         = 999.0f;
+
+    /* 彻底清除右半屏姿态仪视口物理区域 (X:94~159, Y:0~79) */
+    ST7735_FillRect(94, 0, 66, 80, COLOR_BLACK);
 }
 
 void user_display_draw_cube(float pitch, float roll)
 {
-    /* 1. 静态防抖/消闪过滤:
-     * 当电路板静止在桌面或手中保持不动(角度微变 < 0.8 度)且上一帧完整呈现时,
-     * 直接跳过重画, 彻底根除每 100ms 重复擦除造成的 10Hz 闪烁! */
-    if (s_cube_has_prev && fabsf(pitch - s_last_pitch) < 0.8f && fabsf(roll - s_last_roll) < 0.8f)
+    /* 1. 静态防抖: 微小变化 (< 0.6 度) 且上一帧已完整渲染时跳过刷新，杜绝无意义重绘 */
+    if (s_has_prev_attitude && fabsf(pitch - s_last_pitch) < 0.6f && fabsf(roll - s_last_roll) < 0.6f)
     {
         return;
     }
 
-    /* 2. 角度转弧度 (俯视等轴测视角: 俯视 25 度, 偏转 30 度) */
-    float rad_p = (-pitch + 25.0f) * (3.14159265f / 180.0f);
-    float rad_r = (roll   + 30.0f) * (3.14159265f / 180.0f);
+    /* 限制俯仰显示范围，防止地平线完全移出仪表圈 */
+    float pitch_clamped = pitch;
+    if (pitch_clamped > 38.0f)  pitch_clamped = 38.0f;
+    if (pitch_clamped < -38.0f) pitch_clamped = -38.0f;
 
-    float cp = cosf(rad_p), sp = sinf(rad_p);
-    float cr = cosf(rad_r), sr = sinf(rad_r);
+    /* 角度转弧度 (Roll: 右滚转为正，地平线相对逆时针转) */
+    float rad = roll * (3.14159265f / 180.0f);
+    float sin_r = sinf(rad);
+    float cos_r = cosf(rad);
 
-    int16_t new_x[8];
-    int16_t new_y[8];
+    /* 俯仰引起的地平线中心在屏幕 Y 轴上的位移 (抬头发正: 地平线向下移; 低头发负: 地平线向上移) */
+    float dy_h = pitch_clamped * PITCH_SCALE;
 
-    /* 3. 先在内存中预先解算 8 个新顶点的 3D 旋转与屏幕投影坐标
-     * 关键修正: 俯视视角下 z 为正(Z+ 顶面)在屏幕上 Y 向上投影 (y1 = y*cp + z*sp),
-     * 保证正放桌面时红色顶面正对用户并朝上显示! */
-    for (int i = 0; i < 8; i++)
+    /* 2. 逐行全覆写扫描式渲染圆形仪表盘 (内部像素单帧 100% 覆盖，绝无残影与拖尾) */
+    uint16_t row_buf[56];
+    const int16_t R = HORIZON_R;
+    const int32_t R_sq = R * R;
+    const int32_t R_inner_sq = (R - 1) * (R - 1);
+
+    for (int16_t dy = -R; dy <= R; dy++)
     {
-        float x = s_cube_vertices[i][0];
-        float y = s_cube_vertices[i][1];
-        float z = s_cube_vertices[i][2];
+        int32_t dy2 = (int32_t)dy * dy;
+        if (dy2 > R_sq) continue;
 
-        /* 绕 X 轴旋转 (Pitch) */
-        float y1 = y * cp + z * sp;
-        float z1 = -y * sp + z * cp;
+        int16_t dx_max = (int16_t)sqrtf((float)(R_sq - dy2));
+        int16_t x0 = HORIZON_CX - dx_max;
+        int16_t x1 = HORIZON_CX + dx_max;
+        uint16_t len = (uint16_t)(x1 - x0 + 1);
+        if (len > 55) len = 55;
 
-        /* 绕 Y 轴旋转 (Roll) */
-        float x2 = x * cr + z1 * sr;
-        float y2 = y1;
+        float c_y = (dy - dy_h) * cos_r;
+        float h = (float)(dx_max) * sin_r - c_y;
+        float dh = -sin_r;
 
-        new_x[i] = (int16_t)(CUBE_CX + x2);
-        new_y[i] = (int16_t)(CUBE_CY - y2);
-    }
-
-    /* 4. 逐线立即替换渲染:
-     * 不再统一清屏，而是仅对变动的棱边先擦后画，端点擦除到新画间隔不足 50 微秒，人眼完全无黑帧感 */
-    for (int i = 0; i < 12; i++)
-    {
-        int16_t x0 = new_x[s_cube_edges[i][0]];
-        int16_t y0 = new_y[s_cube_edges[i][0]];
-        int16_t x1 = new_x[s_cube_edges[i][1]];
-        int16_t y1 = new_y[s_cube_edges[i][1]];
-
-        /* 配色方案:
-         * 顶面 (edges 4..7, Z+ 向上): 纯红 (COLOR_RED) 代表板子正面天顶朝向
-         * 底面 (edges 0..3, Z- 向下): 青色 (COLOR_CYAN) 代表板子底面地心
-         * 立柱 (edges 8..11): 白色 (COLOR_WHITE)
-         */
-        uint16_t color = COLOR_WHITE;
-        if (i >= 4 && i <= 7)
+        for (uint16_t i = 0; i < len; i++)
         {
-            color = COLOR_RED;
-        }
-        else if (i < 4)
-        {
-            color = COLOR_CYAN;
-        }
+            int16_t dx = -dx_max + (int16_t)i;
+            int32_t r2 = (int32_t)dx * dx + dy2;
 
-        if (s_cube_has_prev)
-        {
-            /* 若该线段未发生像素位移，直接保留 */
-            if (s_prev_lines[i][0] == x0 && s_prev_lines[i][1] == y0 &&
-                s_prev_lines[i][2] == x1 && s_prev_lines[i][3] == y1)
+            if (r2 >= R_inner_sq)
             {
-                continue;
+                row_buf[i] = COLOR_AV_BEZEL; /* 刻度盘边缘环 */
             }
-
-            /* 擦除该条旧线 */
-            ST7735_DrawLine(s_prev_lines[i][0], s_prev_lines[i][1],
-                            s_prev_lines[i][2], s_prev_lines[i][3], COLOR_BLACK);
+            else
+            {
+                if (fabsf(h) <= 0.85f)
+                {
+                    row_buf[i] = COLOR_WHITE;       /* 白色人工地平线 */
+                }
+                else if (h > 0.0f)
+                {
+                    row_buf[i] = COLOR_AV_SKY;      /* 天空深蓝 */
+                }
+                else
+                {
+                    row_buf[i] = COLOR_AV_GROUND;   /* 大地暖棕 */
+                }
+            }
+            h += dh;
         }
 
-        /* 紧接着画出新线 */
-        ST7735_DrawLine(x0, y0, x1, y1, color);
-
-        s_prev_lines[i][0] = x0;
-        s_prev_lines[i][1] = y0;
-        s_prev_lines[i][2] = x1;
-        s_prev_lines[i][3] = y1;
+        ST7735_DrawRGB16Span(x0, (uint16_t)(HORIZON_CY + dy), len, row_buf);
     }
 
-    s_last_pitch = pitch;
-    s_last_roll  = roll;
-    s_cube_has_prev = true;
+    /* 3. 绘制动态俯仰梯形标尺刻度线 (+10°, +20°, -10°, -20°) */
+    static const float s_pitch_ticks[4] = {-20.0f, -10.0f, 10.0f, 20.0f};
+    for (int t = 0; t < 4; t++)
+    {
+        float p_mark = s_pitch_ticks[t];
+        float H_mark = (p_mark - pitch_clamped) * PITCH_SCALE;
+
+        /* 仅在圆盘可视区域内绘制 */
+        if (fabsf(H_mark) > (float)(R - 6)) continue;
+
+        /* 标尺中心坐标 */
+        float bx = (float)HORIZON_CX - H_mark * sin_r;
+        float by = (float)HORIZON_CY - H_mark * cos_r;
+
+        /* 平行于地平线方向向量 */
+        float ux = cos_r;
+        float uy = -sin_r;
+
+        /* 标尺半宽 5 像素 (全长 10 像素) */
+        float bw = 5.0f;
+        int16_t lx0 = (int16_t)roundf(bx - bw * ux);
+        int16_t ly0 = (int16_t)roundf(by - bw * uy);
+        int16_t lx1 = (int16_t)roundf(bx + bw * ux);
+        int16_t ly1 = (int16_t)roundf(by + bw * uy);
+
+        ST7735_DrawLine(lx0, ly0, lx1, ly1, COLOR_WHITE);
+
+        /* 标尺向地平线方向弯折的端点倒勾 (2 像素) */
+        float sign_dir = (p_mark > 0.0f) ? 1.0f : -1.0f;
+        float tx = sign_dir * sin_r * 2.0f;
+        float ty = sign_dir * cos_r * 2.0f;
+        ST7735_DrawLine(lx0, ly0, (int16_t)roundf(lx0 + tx), (int16_t)roundf(ly0 + ty), COLOR_WHITE);
+        ST7735_DrawLine(lx1, ly1, (int16_t)roundf(lx1 + tx), (int16_t)roundf(ly1 + ty), COLOR_WHITE);
+    }
+
+    /* 4. 绘制机体固定战机/飞鸟基准符号 (亮金黄色，指示飞机当前机体朝向) */
+    /* 中心瞄准核 (3x3 像素) */
+    ST7735_FillRect(HORIZON_CX - 1, HORIZON_CY - 1, 3, 3, COLOR_AV_AIRCRAFT);
+
+    /* 左机翼横杠与向下外翼尖 (双层线条加粗显眼) */
+    ST7735_DrawLine(HORIZON_CX - 13, HORIZON_CY,     HORIZON_CX - 5, HORIZON_CY,     COLOR_AV_AIRCRAFT);
+    ST7735_DrawLine(HORIZON_CX - 13, HORIZON_CY + 1, HORIZON_CX - 5, HORIZON_CY + 1, COLOR_AV_AIRCRAFT);
+    ST7735_DrawLine(HORIZON_CX - 5,  HORIZON_CY,     HORIZON_CX - 5, HORIZON_CY + 3, COLOR_AV_AIRCRAFT);
+
+    /* 右机翼横杠与向下外翼尖 (双层线条加粗显眼) */
+    ST7735_DrawLine(HORIZON_CX + 5,  HORIZON_CY,     HORIZON_CX + 13, HORIZON_CY,     COLOR_AV_AIRCRAFT);
+    ST7735_DrawLine(HORIZON_CX + 5,  HORIZON_CY + 1, HORIZON_CX + 13, HORIZON_CY + 1, COLOR_AV_AIRCRAFT);
+    ST7735_DrawLine(HORIZON_CX + 5,  HORIZON_CY,     HORIZON_CX + 5,  HORIZON_CY + 3, COLOR_AV_AIRCRAFT);
+
+    /* 5. 外圈顶部零滚转指引三角标 (12 点钟方向白三角) */
+    ST7735_DrawPixel(HORIZON_CX,     HORIZON_CY - R,     COLOR_WHITE);
+    ST7735_DrawLine(HORIZON_CX - 1, HORIZON_CY - R - 1, HORIZON_CX + 1, HORIZON_CY - R - 1, COLOR_WHITE);
+    ST7735_DrawLine(HORIZON_CX - 2, HORIZON_CY - R - 2, HORIZON_CX + 2, HORIZON_CY - R - 2, COLOR_WHITE);
+
+    /* 外圈 ±30° 与 ±60° 倾角刻度短线 */
+    ST7735_DrawLine(HORIZON_CX - 13, HORIZON_CY - 23, HORIZON_CX - 15, HORIZON_CY - 25, COLOR_WHITE);
+    ST7735_DrawLine(HORIZON_CX + 13, HORIZON_CY - 23, HORIZON_CX + 15, HORIZON_CY - 25, COLOR_WHITE);
+    ST7735_DrawLine(HORIZON_CX - 23, HORIZON_CY - 13, HORIZON_CX - 25, HORIZON_CY - 15, COLOR_WHITE);
+    ST7735_DrawLine(HORIZON_CX + 23, HORIZON_CY - 13, HORIZON_CX + 25, HORIZON_CY - 15, COLOR_WHITE);
+
+    s_last_pitch        = pitch;
+    s_last_roll         = roll;
+    s_has_prev_attitude = true;
 }
 
 /* ================= Page2 数据刷新 ================= */

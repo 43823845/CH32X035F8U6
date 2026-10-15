@@ -47,13 +47,13 @@ void App_Sensor_Update(void)
             s_sensor_data.acc_y = acc.y_mg;
             s_sensor_data.acc_z = acc.z_mg;
 
-            /* 计算 Pitch 与 Roll */
+            /* 计算 Pitch (Y轴纵向俯仰) 与 Roll (X轴横向滚转) */
             float ax = acc.x_mg;
             float ay = acc.y_mg;
             float az = acc.z_mg;
 
-            s_sensor_data.pitch = atan2f(ax, sqrtf(ay * ay + az * az)) * RAD_TO_DEG;
-            s_sensor_data.roll  = atan2f(ay, az) * RAD_TO_DEG;
+            s_sensor_data.pitch = atan2f(ay, az) * RAD_TO_DEG;
+            s_sensor_data.roll  = atan2f(ax, az) * RAD_TO_DEG;
         }
 
         /* 4. 读取内建功能事件: 单击 / 双击 / 自由落体 (读取即清除锁存标志) */

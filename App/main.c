@@ -126,6 +126,7 @@ int main(void)
     }
 
     /* 4. Page1 展示 2 秒后切换到 Page2 (传感器数据监控页) */
+    user_display_reset_cube();
     s_cur_page = WUI_PAGE_2;
     wui_page_switch(WUI_PAGE_2);
 
