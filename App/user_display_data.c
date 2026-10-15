@@ -22,11 +22,12 @@
  * 全工程仅此处引用设计器生成的 PAGE_x_COMPONENT_xxx 枚举。
  * 设计器增删/重排控件导致序号变化时, 只需修改下表, 下面显示逻辑保持不变。 */
 
-/* Page2 (姿态与加速度监控页) - 文本控件位于左侧 x:3~103，右侧 x:104~159 独立渲染 3D 姿态立方体 */
-#define WUI_P2_WIDGET_POSE   PAGE_2_COMPONENT_001   /* component_001: 姿态 */
-#define WUI_P2_WIDGET_ACC_X  PAGE_2_COMPONENT_002   /* component_002: X 轴加速度 */
-#define WUI_P2_WIDGET_ACC_Y  PAGE_2_COMPONENT_003   /* component_003: Y 轴加速度 */
-#define WUI_P2_WIDGET_ACC_Z  PAGE_2_COMPONENT_004   /* component_004: Z 轴加速度 */
+/* Page2 (姿态与加速度监控页) - 文本控件位于左侧 x:3~99，中右区域 x:103~150 独立渲染 3D 姿态立方体，右侧 x:154~157 为俯仰进度条 */
+#define WUI_P2_WIDGET_POSE       PAGE_2_COMPONENT_001   /* component_001: 姿态 */
+#define WUI_P2_WIDGET_ACC_X      PAGE_2_COMPONENT_002   /* component_002: X 轴加速度 */
+#define WUI_P2_WIDGET_ACC_Y      PAGE_2_COMPONENT_003   /* component_003: Y 轴加速度 */
+#define WUI_P2_WIDGET_ACC_Z      PAGE_2_COMPONENT_004   /* component_004: Z 轴加速度 */
+#define WUI_P2_WIDGET_PB_PITCH   PAGE_2_COMPONENT_005   /* component_005: 俯仰角指示进度条 */
 
 /* Page3 (动作识别与落体检测页)
  * 注: component_001("动作识别:")与 component_002("落体检测:")为中文静态标题图片;
@@ -359,10 +360,10 @@ void user_display_draw_cube(float pitch, float roll)
 
 /* ================= Page2 数据刷新 ================= */
 
-/* 由主循环按 100ms 周期调用, 完成 Page2 姿态及三轴加速度刷新 + 3D 立方体绘制 */
+/* 由主循环按 100ms 周期调用, 完成 Page2 姿态及三轴加速度刷新 + 3D 立方体绘制 + 俯仰角进度条指示 */
 void wui_page_page_2_update_data(float pitch, float roll, float ax, float ay, float az)
 {
-    /* 1. 左半屏: 文本数值更新 (紧凑规整，不遮挡右侧立方体) */
+    /* 1. 左半屏: 文本数值更新 (控件宽度已扩充至 96px，完整呈现负号与 4 位数值) */
     snprintf(s_pose_str, sizeof(s_pose_str), "Pose:%s", user_display_attitude_text());
     wui_widget_simplestring_set_str(WUI_P2_WIDGET_POSE, s_pose_str);
 
@@ -375,7 +376,13 @@ void wui_page_page_2_update_data(float pitch, float roll, float ax, float ay, fl
     snprintf(s_acc_z_str, sizeof(s_acc_z_str), "Z:%ld", (long)(int32_t)az);
     wui_widget_simplestring_set_str(WUI_P2_WIDGET_ACC_Z, s_acc_z_str);
 
-    /* 2. 右半屏: 实时绘制 3D 姿态立体线框 */
+    /* 2. 右侧垂直进度条 (component_005): 实时指示俯仰角度 (Pitch: -90° ~ +90° 线性映射为 0 ~ 100%) */
+    int32_t pb_pitch = (int32_t)((pitch + 90.0f) * (100.0f / 180.0f) + 0.5f);
+    if (pb_pitch < 0)   pb_pitch = 0;
+    if (pb_pitch > 100) pb_pitch = 100;
+    wui_widget_pb_set_value(WUI_P2_WIDGET_PB_PITCH, (uint8_t)pb_pitch);
+
+    /* 3. 中右区域: 实时绘制 3D 姿态立体方块 (双缓冲零频闪) */
     user_display_draw_cube(pitch, roll);
 }
 

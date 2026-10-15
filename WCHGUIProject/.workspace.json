@@ -1,7 +1,9 @@
 {
-  "currentPageId": "WUI_PAGE_1",
-  "selectedComponentId": null,
-  "selectedComponentIds": [],
+  "currentPageId": "WUI_PAGE_2",
+  "selectedComponentId": "component_005",
+  "selectedComponentIds": [
+    "component_005"
+  ],
   "zoom": 2.4000000000000012,
   "offsetX": 0.0,
   "offsetY": 0.0,
