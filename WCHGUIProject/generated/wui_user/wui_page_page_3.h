@@ -72,7 +72,6 @@ static const wui_widget_desc_t widgets_page_3[] = {
             .align    = WUI_SIMPLESTRING_ALIGN_LEFT,
         },
     },
-
 };
 
 

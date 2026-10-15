@@ -12,13 +12,13 @@
       "templateId": null,
       "templateVersion": 0,
       "templateDetached": false,
-      "backgroundColor": 16777215,
+      "backgroundColor": 0,
       "components": [
         {
           "idName": "component_003",
           "type": "label",
-          "x": 18,
-          "y": 56,
+          "x": 14,
+          "y": 44,
           "w": 134,
           "h": 24,
           "text": "亮度&姿态测试仪 1.0",
@@ -31,41 +31,19 @@
           "imageSequenceFrameIndex": 0,
           "colorValue": 4281303277,
           "foregroundColorValue": 5227511,
-          "backgroundColorValue": 16777215,
+          "backgroundColorValue": 0,
           "props": {
             "align": "left",
             "supportsTouch": false
           }
         },
         {
-          "idName": "component_002",
-          "type": "image",
-          "x": 17,
-          "y": 0,
-          "w": 50,
-          "h": 50,
-          "text": null,
-          "fontId": null,
-          "imageName": null,
-          "imageBindingType": "singleImage",
-          "imageCompressionType": "rle",
-          "imageResourceId": "img_2025_12_24_212900_445",
-          "imageSequenceId": null,
-          "imageSequenceFrameIndex": 0,
-          "colorValue": 4287669422,
-          "foregroundColorValue": 16777215,
-          "backgroundColorValue": 0,
-          "props": {
-            "supportsTouch": false
-          }
-        },
-        {
           "idName": "component_001",
           "type": "staticText",
-          "x": 72,
-          "y": 15,
-          "w": 77,
-          "h": 28,
+          "x": 46,
+          "y": 6,
+          "w": 73,
+          "h": 30,
           "text": "Origin",
           "fontId": null,
           "imageName": null,
@@ -79,7 +57,7 @@
           "backgroundColorValue": 0,
           "props": {
             "fontFamily": "Microsoft YaHei",
-            "fontSize": 16,
+            "fontSize": 20,
             "textColor": 15684432,
             "bold": false,
             "italic": false,
@@ -105,10 +83,10 @@
         {
           "idName": "component_005",
           "type": "slider",
-          "x": 79,
-          "y": 65,
-          "w": 71,
-          "h": 7,
+          "x": 154,
+          "y": 5,
+          "w": 4,
+          "h": 74,
           "text": "ProgressBar",
           "fontId": null,
           "imageName": null,
@@ -123,7 +101,7 @@
           "props": {
             "maxValue": 100,
             "defaultValue": 20,
-            "direction": "horizontal",
+            "direction": "vertical",
             "backgroundColor": 0,
             "fillColor": 8505220,
             "supportsTouch": false
@@ -132,8 +110,8 @@
         {
           "idName": "component_004",
           "type": "label",
-          "x": 15,
-          "y": 57,
+          "x": 4,
+          "y": 58,
           "w": 37,
           "h": 18,
           "text": "Z:",
@@ -155,8 +133,8 @@
         {
           "idName": "component_003",
           "type": "label",
-          "x": 85,
-          "y": 22,
+          "x": 4,
+          "y": 40,
           "w": 37,
           "h": 18,
           "text": "Y:",
@@ -178,8 +156,8 @@
         {
           "idName": "component_002",
           "type": "label",
-          "x": 15,
-          "y": 22,
+          "x": 4,
+          "y": 20,
           "w": 37,
           "h": 19,
           "text": "X:",
@@ -373,7 +351,7 @@
   "resourceFilters": [],
   "imageSequences": [],
   "workspaceState": {
-    "currentPageId": "WUI_PAGE_4",
+    "currentPageId": "WUI_PAGE_1",
     "selectedComponentId": null,
     "selectedComponentIds": [],
     "zoom": 2.4000000000000012,

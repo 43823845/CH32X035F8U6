@@ -12,7 +12,6 @@
 typedef enum
 {
     PAGE_1_COMPONENT_001,
-    PAGE_1_COMPONENT_002,
     PAGE_1_COMPONENT_003,
 } page_1_widget_id_t;
 
@@ -21,38 +20,26 @@ static const wui_widget_desc_t widgets_page_1[] = {
     [PAGE_1_COMPONENT_001] = {
         .widget_id = PAGE_1_COMPONENT_001,
         .type      = Wui_w_StaticImage,
-        .x         = 72,
-        .y         = 15,
-        .w         = 77,
-        .h         = 28,
+        .x         = 46,
+        .y         = 6,
+        .w         = 73,
+        .h         = 30,
         .props.staticimg = {
             .img_id = IMAGE_TEXT_WUI_PAGE_1_COMPONENT_001,
-        },
-    },
-
-    [PAGE_1_COMPONENT_002] = {
-        .widget_id = PAGE_1_COMPONENT_002,
-        .type      = Wui_w_StaticImage,
-        .x         = 17,
-        .y         = 0,
-        .w         = 50,
-        .h         = 50,
-        .props.staticimg = {
-            .img_id = IMAGE_IMG_2025_12_24_212900_445,
         },
     },
 
     [PAGE_1_COMPONENT_003] = {
         .widget_id = PAGE_1_COMPONENT_003,
         .type      = Wui_w_SimpleString,
-        .x         = 18,
-        .y         = 56,
+        .x         = 14,
+        .y         = 44,
         .w         = 134,
         .h         = 24,
         .props.simplestring = {
             .str_id   = WUI_STR_PAGE_1_COMPONENT_003,
             .fg_color = RGB888_TO_RGB565(79, 195, 247),
-            .bg_color = RGB888_TO_RGB565(255, 255, 255),
+            .bg_color = RGB888_TO_RGB565(0, 0, 0),
             .align    = WUI_SIMPLESTRING_ALIGN_LEFT,
         },
     },

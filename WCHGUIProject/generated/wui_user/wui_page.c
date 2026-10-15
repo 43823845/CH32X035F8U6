@@ -13,7 +13,7 @@ const wui_page_desc_t wui_pages[WUI_PAGE_COUNT] = {
         .user_data = NULL,
     },
     [WUI_PAGE_1] = {
-        .bg_color = RGB888_TO_RGB565(255, 255, 255),
+        .bg_color = RGB888_TO_RGB565(0, 0, 0),
         .page_name = "Page1",
         .page_init = wui_page_page_1_init,
         .page_loop = wui_page_page_1_loop,
