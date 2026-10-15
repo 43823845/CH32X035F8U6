@@ -670,12 +670,16 @@ void USBFS_IRQHandler(void)
     }
     else if (intflag & USBFS_UIF_BUS_RST)
     {
-        /* 总线复位中断：重置所有配置与端点状态 */
+        /* 总线复位中断：重置所有配置与端点状态及发送/接收环形缓冲 */
         s_dev_config   = 0;
         s_dev_addr     = 0;
         s_dev_sleep    = 0;
         s_dev_enum     = 0;
         s_dtr_asserted = false;
+        s_tx_head      = 0;
+        s_tx_tail      = 0;
+        s_rx_head      = 0;
+        s_rx_tail      = 0;
         USBFSD->DEV_ADDR = 0;
         USBFS_Device_Endp_Init();
         USBFSD->INT_FG = USBFS_UIF_BUS_RST;

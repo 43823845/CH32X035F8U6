@@ -216,10 +216,10 @@ void ST7735_Init(void)
     Delay_Ms(100);
 }
 
-void ST7735_DrawPixel(uint16_t x, uint16_t y, uint16_t color)
+void ST7735_DrawPixel(int16_t x, int16_t y, uint16_t color)
 {
-    if (x >= s_width || y >= s_height) return;
-    ST7735_SetAddressWindow(x, y, x, y);
+    if (x < 0 || x >= (int16_t)s_width || y < 0 || y >= (int16_t)s_height) return;
+    ST7735_SetAddressWindow((uint16_t)x, (uint16_t)y, (uint16_t)x, (uint16_t)y);
     ST7735_WriteData16(color);
 }
 
@@ -268,7 +268,7 @@ void ST7735_DrawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t co
 
     while (1)
     {
-        ST7735_DrawPixel((uint16_t)x0, (uint16_t)y0, color);
+        ST7735_DrawPixel(x0, y0, color);
         if (x0 == x1 && y0 == y1) break;
         int16_t e2 = 2 * err;
         if (e2 >= dy)

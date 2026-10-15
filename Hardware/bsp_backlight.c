@@ -1,6 +1,7 @@
 #include "bsp_backlight.h"
 
-static uint8_t s_brightness = 100;
+static uint8_t s_brightness      = 100;
+static uint8_t s_last_brightness = 100;
 
 void Backlight_Init(void)
 {
@@ -38,6 +39,10 @@ void Backlight_Init(void)
 void Backlight_SetBrightness(uint8_t percent)
 {
     if (percent > 100) percent = 100;
+    if (percent > 0)
+    {
+        s_last_brightness = percent;
+    }
     s_brightness = percent;
 
     GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -76,7 +81,7 @@ uint8_t Backlight_GetBrightness(void)
 
 void Backlight_On(void)
 {
-    Backlight_SetBrightness(s_brightness > 0 ? s_brightness : 80);
+    Backlight_SetBrightness(s_last_brightness > 0 ? s_last_brightness : 100);
 }
 
 void Backlight_Off(void)

@@ -56,6 +56,18 @@ static void Handle_Key_Event(KeyEvent_t key)
             wui_page_switch((uint16_t)WUI_PAGE_2);
         }
     }
+    else if (key == KEY_EVENT_LONG_PRESS)
+    {
+        /* 长按按键: 开关背光 */
+        if (Backlight_GetBrightness() > 0)
+        {
+            Backlight_Off();
+        }
+        else
+        {
+            Backlight_On();
+        }
+    }
 }
 
 int main(void)
@@ -99,6 +111,7 @@ int main(void)
         wui_page_ui_tick(10);
         wui_page_ui_update();
         wui_page_ui_loop();
+        USB_CDC_Poll();
         Delay_Ms(10);
     }
 
