@@ -1,0 +1,173 @@
+{
+    "codeGenMode": "struct",
+    "defaultByteOrder": "little",
+    "fields": [
+        {
+            "fixedHex": "AA 55",
+            "id": "field_1792389299299_1ddc1472",
+            "name": "header",
+            "role": "header"
+        },
+        {
+            "byteLength": 4,
+            "byteOrder": "little",
+            "id": "field_1792389299299_8075cd48",
+            "name": "Lux",
+            "offset": 0,
+            "plot": true,
+            "role": "data",
+            "scale": 1,
+            "valueType": "float"
+        },
+        {
+            "byteLength": 2,
+            "byteOrder": "little",
+            "id": "field_1792389299299_a720db0b",
+            "name": "P",
+            "offset": 0,
+            "plot": true,
+            "role": "data",
+            "scale": 1,
+            "valueType": "int"
+        },
+        {
+            "byteLength": 2,
+            "byteOrder": "little",
+            "id": "field_1792389299299_7994967b",
+            "name": "R",
+            "offset": 0,
+            "plot": true,
+            "role": "data",
+            "scale": 1,
+            "valueType": "int"
+        },
+        {
+            "byteLength": 2,
+            "byteOrder": "little",
+            "id": "field_1792389299299_9801b5b3",
+            "name": "X",
+            "offset": 0,
+            "plot": true,
+            "role": "data",
+            "scale": 1,
+            "valueType": "int"
+        },
+        {
+            "byteLength": 2,
+            "byteOrder": "little",
+            "id": "field_1792389299299_d8125eba",
+            "name": "Y",
+            "offset": 0,
+            "plot": true,
+            "role": "data",
+            "scale": 1,
+            "valueType": "int"
+        },
+        {
+            "byteLength": 2,
+            "byteOrder": "little",
+            "id": "field_1792389299299_8a9deb9e",
+            "name": "Z",
+            "offset": 0,
+            "plot": true,
+            "role": "data",
+            "scale": 1,
+            "valueType": "int"
+        },
+        {
+            "byteLength": 1,
+            "byteOrder": "little",
+            "id": "field_1792389299299_e204c2b3",
+            "name": "BL",
+            "offset": 0,
+            "plot": true,
+            "role": "data",
+            "scale": 1,
+            "valueType": "int"
+        },
+        {
+            "byteLength": 1,
+            "byteOrder": "little",
+            "id": "field_1792389299299_d8a65620",
+            "name": "TAP1",
+            "offset": 0,
+            "plot": true,
+            "role": "data",
+            "scale": 1,
+            "valueType": "int"
+        },
+        {
+            "byteLength": 1,
+            "byteOrder": "little",
+            "id": "field_1792389299299_3c417151",
+            "name": "TAP2",
+            "offset": 0,
+            "plot": true,
+            "role": "data",
+            "scale": 1,
+            "valueType": "int"
+        },
+        {
+            "byteLength": 1,
+            "byteOrder": "little",
+            "id": "field_1792389299299_5bca5ad7",
+            "name": "FF1",
+            "offset": 0,
+            "plot": true,
+            "role": "data",
+            "scale": 1,
+            "valueType": "int"
+        },
+        {
+            "byteLength": 1,
+            "byteOrder": "little",
+            "id": "field_1792389299299_ee5a93d4",
+            "name": "FF2",
+            "offset": 0,
+            "plot": true,
+            "role": "data",
+            "scale": 1,
+            "valueType": "int"
+        },
+        {
+            "byteLength": 2,
+            "byteOrder": "little",
+            "id": "field_1792389299299_24b175f9",
+            "name": "INT1",
+            "offset": 0,
+            "plot": true,
+            "role": "data",
+            "scale": 1,
+            "valueType": "int"
+        },
+        {
+            "byteLength": 4,
+            "byteOrder": "little",
+            "id": "field_1792389299299_d46119a8",
+            "name": "INT2",
+            "offset": 0,
+            "plot": true,
+            "role": "data",
+            "scale": 1,
+            "valueType": "int"
+        },
+        {
+            "byteOrder": "little",
+            "checksum": "sum8",
+            "checksumEndFieldIndex": 13,
+            "checksumStartFieldIndex": 1,
+            "id": "field_1792389299299_9e997068",
+            "name": "checksum",
+            "role": "checksum"
+        },
+        {
+            "fixedHex": "0D 0A",
+            "id": "field_1792389299299_906c0e40",
+            "name": "tail",
+            "role": "tail"
+        }
+    ],
+    "id": "proto_ch32x035_monitor",
+    "name": "CH32X035_Monitor",
+    "type": "configurable_binary"
+}

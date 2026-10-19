@@ -7,5 +7,5 @@ obj/
 # OS / Editor temporary files
 *.tmp
 *.bak
-.DS_Store
-Thumbs.db
+# Local agent/tool configurations
+.agents/

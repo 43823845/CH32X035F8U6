@@ -13,6 +13,7 @@
 #include "st7735.h"
 #include "usb_cdc.h"
 #include "app_sensor.h"
+#include "debug_protocol.h"
 #include "wui.h"
 #include "wui_port.h"
 #include "wui_page.h"
@@ -94,6 +95,7 @@ int main(void)
     Backlight_Init();
     ST7735_Init();
     USB_CDC_Init();
+    DebugProtocol_Init();
 
     printf("\r\n========================================\r\n");
     printf("  CH32X035F8U6 Sensor Monitor (INT1/2 Ready)  \r\n");
@@ -186,31 +188,8 @@ int main(void)
                 );
             }
 
-            /* 每 500ms 向上位机串口助手输出一次结构化调试信息 (定点数格式化，完美兼容 nano-printf) */
-            if (tick_count % 50 == 0)
-            {
-                int32_t lux_i = (int32_t)data->lux;
-                int32_t lux_d = (int32_t)((data->lux - (float)lux_i) * 10.0f);
-                if (lux_d < 0) lux_d = -lux_d;
-
-                int32_t pitch_i = (int32_t)data->pitch;
-                int32_t roll_i  = (int32_t)data->roll;
-                int32_t ax_i    = (int32_t)data->acc_x;
-                int32_t ay_i    = (int32_t)data->acc_y;
-                int32_t az_i    = (int32_t)data->acc_z;
-
-                printf("[DEBUG] Lux:%ld.%ld | P:%ld R:%ld | X:%ld Y:%ld Z:%ld | BL:%d%% | TAP:%lu/%lu FF:%lu(%d) | INT1:%lu INT2:%lu\r\n",
-                       (long)lux_i, (long)lux_d,
-                       (long)pitch_i, (long)roll_i,
-                       (long)ax_i, (long)ay_i, (long)az_i,
-                       (int)Backlight_GetBrightness(),
-                       (unsigned long)data->tap_single_count,
-                       (unsigned long)data->tap_double_count,
-                       (unsigned long)data->ff_count,
-                       (int)data->ff_recent,
-                       (unsigned long)data->int1_count,
-                       (unsigned long)data->int2_count);
-            }
+            /* 向上位机(Synex / VOFA+)输出 JustFloat 数据帧 (每 100ms 刷新) */
+            DebugProtocol_SendFrame(data, Backlight_GetBrightness());
         }
 
         /* 维护 USB CDC 发送队列 */

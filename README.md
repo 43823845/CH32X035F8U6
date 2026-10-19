@@ -300,4 +300,22 @@ make all
 * **配套生成设备管理器名称映射文件**：
   * 根目录新增轻量级描述文件 [ch32x035_cdc.inf](file:///c:/Users/Lenovo/Desktop/CH32X035F8U6-main/ch32x035_cdc.inf)，继承自 Windows 自带且免签名的 `usbser.inf`。用户右键“安装”后，设备管理器最外层端口名称直接显示为 `CH32X035 姿态与光强传感器监控端口 (COMx)`。
 
+---
+
+### [2026-10-19] 上位机数据协议升级与 Synex 一体化工程调试工作台深度适配
+
+#### 1. 协议升级背景与选型决策
+原有调试输出仅支持纯文本打印（`[DEBUG] Lux:...`），无法在上位机中生成多通道实时连续曲线，且文本格式化（`printf`）占用单片机宝贵的计算资源与通信带宽。针对上位机联调需求，系统重构并实现了四种经典协议：
+* **JustFloat（高速浮点协议，默认推荐）**：由 12 个小端 `float32` 通道数据及 `0x7F800000` 专用帧尾构成（52 字节/帧）。**在 Synex 中为零配置使用**（连接页选择 `JustFloat` 即自动展开多通道波形），MCU 端直接以二进制原值通过 USB 发送，CPU 占用率接近 0%，无任何字符串格式化开销；
+* **FireWater（文本 CSV 协议）**：以英文逗号分隔的多通道文本流（`\n` 结尾），兼顾普通串口调试助手（如 SSCOM、Putty）与 Synex / VOFA+；
+* **CustomBinary（自定义二进制协议）**：采用 `[0x55 0xAA][Len=28][Payload 28B][Sum8][0x0D 0x0A]` 结构（34 字节/帧），附带标准校验，适合工业级严谨通信；
+* **RawData（原始数据模式）**：保留人类可读的终端诊断日志输出。
+
+#### 2. 软件模块与架构新增
+* **协议适配层独立收拢**：在 `App/` 目录下新增 [debug_protocol.h](file:///c:/Users/Lenovo/Desktop/CH32X035F8U6-main/App/debug_protocol.h) 与 [debug_protocol.c](file:///c:/Users/Lenovo/Desktop/CH32X035F8U6-main/App/debug_protocol.c)，主循环周期（100ms / 10Hz）自动打包上报，与 UI 驱动及底层 USB CDC 解耦；
+* **指令台热切换机制**：下位机监听 USB CDC 接收队列，支持在 Synex 指令台或控制台中下发单字符（`1`=JustFloat, `2`=FireWater, `3`=CustomBinary, `4`=RawData, `?`=菜单帮助）实现协议无感即时切换，无需重新烧录；
+* **Synex 官方配置文件就绪**：根目录新增 [synex_ch32x035_protocol.json](file:///c:/Users/Lenovo/Desktop/CH32X035F8U6-main/synex_ch32x035_protocol.json)，支持一键导入 Synex 协议编辑器；
+* **详尽联调文档**：根目录新增 [Synex_Guide.md](file:///c:/Users/Lenovo/Desktop/CH32X035F8U6-main/Synex_Guide.md)，包含 3D 姿态控件、多通道示波器、仪表盘的推荐配置与通道映射说明。
+
+
 
