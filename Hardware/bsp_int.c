@@ -48,36 +48,32 @@ void Bsp_Int_Init(void)
 
 bool Bsp_Int_GetInt1Flag(void)
 {
-    NVIC_DisableIRQ(EXTI7_0_IRQn);
+    __disable_irq();
     bool flag = s_int1_flag;
     s_int1_flag = false;
-    NVIC_EnableIRQ(EXTI7_0_IRQn);
+    __enable_irq();
     return flag;
 }
 
 bool Bsp_Int_GetInt2Flag(void)
 {
-    NVIC_DisableIRQ(EXTI7_0_IRQn);
+    __disable_irq();
     bool flag = s_int2_flag;
     s_int2_flag = false;
-    NVIC_EnableIRQ(EXTI7_0_IRQn);
+    __enable_irq();
     return flag;
 }
 
 uint32_t Bsp_Int_GetInt1Count(void)
 {
-    NVIC_DisableIRQ(EXTI7_0_IRQn);
-    uint32_t count = s_int1_count;
-    NVIC_EnableIRQ(EXTI7_0_IRQn);
-    return count;
+    /* 32-bit 对齐读取在 RISC-V RV32IM 下天然原子 */
+    return s_int1_count;
 }
 
 uint32_t Bsp_Int_GetInt2Count(void)
 {
-    NVIC_DisableIRQ(EXTI7_0_IRQn);
-    uint32_t count = s_int2_count;
-    NVIC_EnableIRQ(EXTI7_0_IRQn);
-    return count;
+    /* 32-bit 对齐读取在 RISC-V RV32IM 下天然原子 */
+    return s_int2_count;
 }
 
 /* ================== EXTI7_0 快速中断服务例程 ================== */

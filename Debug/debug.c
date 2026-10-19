@@ -12,6 +12,7 @@
 *******************************************************************************/
 #include "debug.h"
 #include "usb_cdc.h"
+#include "tiny_format.h"
 
 static uint8_t  p_us = 0;
 static uint16_t p_ms = 0;
@@ -241,6 +242,20 @@ int _write(int fd, char *buf, int size)
 #endif
 #endif
     return size;
+}
+
+int tiny_printf(const char *fmt, ...)
+{
+    char buf[128];
+    va_list args;
+    va_start(args, fmt);
+    int len = tiny_vsnprintf(buf, sizeof(buf), fmt, args);
+    va_end(args);
+    if (len > 0)
+    {
+        _write(1, buf, len);
+    }
+    return len;
 }
 
 /*********************************************************************

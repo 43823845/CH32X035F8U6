@@ -115,11 +115,15 @@ static void ST7735_ClearFullRAM(void)
 
     ST7735_WriteCommand(0x2C); /* RAMWR */
     DC_DATA();
-    for (uint32_t i = 0; i < (uint32_t)132 * 162; i++)
+    uint32_t total_bytes = (uint32_t)132 * 162 * 2;
+    for (uint32_t i = 0; i < total_bytes; i++)
     {
-        SPI1_WriteByte(0x00);
-        SPI1_WriteByte(0x00);
+        uint32_t to = 0xFFFF;
+        while ((SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE) == RESET) && --to);
+        SPI_I2S_SendData(SPI1, 0x00);
     }
+    uint32_t to = 0xFFFF;
+    while ((SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_BSY) == SET) && --to);
 }
 
 void ST7735_Init(void)
@@ -238,9 +242,16 @@ void ST7735_FillRect(uint16_t x, uint16_t y, uint16_t w, uint16_t h, uint16_t co
     uint32_t total_pixels = (uint32_t)w * h;
     for (uint32_t i = 0; i < total_pixels; i++)
     {
-        SPI1_WriteByte(hi);
-        SPI1_WriteByte(lo);
+        uint32_t to = 0xFFFF;
+        while ((SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE) == RESET) && --to);
+        SPI_I2S_SendData(SPI1, hi);
+
+        to = 0xFFFF;
+        while ((SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE) == RESET) && --to);
+        SPI_I2S_SendData(SPI1, lo);
     }
+    uint32_t to = 0xFFFF;
+    while ((SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_BSY) == SET) && --to);
 }
 
 void ST7735_Clear(uint16_t color)
@@ -312,13 +323,16 @@ void ST7735_DrawRGB16Block(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h, con
     for (uint32_t i = 0; i < total; i++)
     {
         uint16_t c = pixels[i];
-        while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE) == RESET);
+        uint32_t to = 0xFFFF;
+        while ((SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE) == RESET) && --to);
         SPI_I2S_SendData(SPI1, (uint8_t)(c >> 8));
 
-        while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE) == RESET);
+        to = 0xFFFF;
+        while ((SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE) == RESET) && --to);
         SPI_I2S_SendData(SPI1, (uint8_t)c);
     }
-    while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_BSY) == SET);
+    uint32_t to = 0xFFFF;
+    while ((SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_BSY) == SET) && --to);
 }
 
 

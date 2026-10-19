@@ -44,8 +44,13 @@ void Delay_Ms(uint32_t n);
 void USART_Printf_Init(uint32_t baudrate);
 void SDI_Printf_Enable(void);
 
+int tiny_printf(const char *fmt, ...);
+#ifndef printf
+#define printf tiny_printf
+#endif
+
 #if(DEBUG)
-  #define PRINT(format, ...)    printf(format, ##__VA_ARGS__)
+  #define PRINT(format, ...)    tiny_printf(format, ##__VA_ARGS__)
 #else
   #define PRINT(X...)
 #endif

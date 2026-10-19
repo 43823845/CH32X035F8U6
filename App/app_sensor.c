@@ -2,15 +2,15 @@
 #include "ltr308.h"
 #include "lis2dw12.h"
 #include "bsp_int.h"
-#include <math.h>
-
-#define RAD_TO_DEG (180.0f / 3.14159265f)
+#include "fast_math.h"
 
 /* 自由落体"检测到"在界面上的保持时间 (单位: 100ms 调用周期 -> 20 即 2s) */
 #define FF_HOLD_TICKS  20
 
 static App_SensorData_t s_sensor_data = {0};
 static uint8_t          s_ff_hold     = 0;
+static uint8_t          s_ltr_retry   = 0;
+static uint8_t          s_lis_retry   = 0;
 
 void App_Sensor_Init(void)
 {
@@ -30,11 +30,16 @@ void App_Sensor_Update(void)
     if (s_sensor_data.ltr308_online)
     {
         s_sensor_data.lux = LTR308_ReadLux();
+        s_ltr_retry = 0;
     }
     else
     {
-        /* 尝试重连 */
-        s_sensor_data.ltr308_online = LTR308_Init();
+        /* 离线退避: 每 2 秒 (20个100ms周期) 尝试重连一次，避免 Delay_Ms(15) 阻塞主循环 */
+        if (++s_ltr_retry >= 20)
+        {
+            s_ltr_retry = 0;
+            s_sensor_data.ltr308_online = LTR308_Init();
+        }
     }
 
     /* 3. 更新加速度与姿态数据 */
@@ -52,8 +57,9 @@ void App_Sensor_Update(void)
             float ay = acc.y_mg;
             float az = acc.z_mg;
 
-            s_sensor_data.pitch = atan2f(ay, az) * RAD_TO_DEG;
-            s_sensor_data.roll  = atan2f(ax, az) * RAD_TO_DEG;
+            s_sensor_data.pitch = fast_atan2f(ay, az) * FAST_RAD_TO_DEG;
+            s_sensor_data.roll  = fast_atan2f(ax, az) * FAST_RAD_TO_DEG;
+            s_lis_retry = 0;
         }
 
         /* 4. 读取内建功能事件: 单击 / 双击 / 自由落体 (读取即清除锁存标志) */
@@ -81,8 +87,12 @@ void App_Sensor_Update(void)
     }
     else
     {
-        /* 尝试重连 */
-        s_sensor_data.lis2dw12_online = LIS2DW12_Init();
+        /* 离线退避: 每 2 秒 (20个100ms周期) 尝试重连一次 */
+        if (++s_lis_retry >= 20)
+        {
+            s_lis_retry = 0;
+            s_sensor_data.lis2dw12_online = LIS2DW12_Init();
+        }
     }
 
     /* 5. 自由落体标志保持 2s 后自动复位 */

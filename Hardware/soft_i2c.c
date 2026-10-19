@@ -10,11 +10,11 @@ static inline void I2C_Delay(void)
 #define SCL_H()    do { GPIOB->BSHR = GPIO_Pin_1; } while(0)
 #define SCL_L()    do { GPIOB->BCR  = GPIO_Pin_1; } while(0)
 
-/* PB0 (SDA) 浮空输入模式 (释放总线，由外部 4.7K 电阻上拉为高) */
-#define SDA_H()    do { GPIOB->CFGLR = (GPIOB->CFGLR & ~0x0000000Fu) | 0x00000004u; } while(0)
+/* PB0 (SDA) 开漏输出高电平: 释放总线，由板载 4.7K 电阻上拉为高 */
+#define SDA_H()    do { GPIOB->BSHR = GPIO_Pin_0; } while(0)
 
-/* PB0 (SDA) 推挽输出模式低电平 (先清零数据，再配置为输出) */
-#define SDA_L()    do { GPIOB->BCR = GPIO_Pin_0; GPIOB->CFGLR = (GPIOB->CFGLR & ~0x0000000Fu) | 0x00000003u; } while(0)
+/* PB0 (SDA) 开漏输出低电平: 下拉总线 */
+#define SDA_L()    do { GPIOB->BCR  = GPIO_Pin_0; } while(0)
 
 #define SDA_READ() ((GPIOB->INDR & GPIO_Pin_0) ? 1 : 0)
 
@@ -22,8 +22,10 @@ void Soft_I2C_Init(void)
 {
     RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
 
-    /* PB1 (SCL) 配置为推挽输出 50MHz (CNF=00, MODE=11) */
-    GPIOB->CFGLR = (GPIOB->CFGLR & ~0x000000F0u) | 0x00000030u;
+    /* PB1 (SCL) 配置为推挽输出 50MHz (CNF=00, MODE=11 -> 0x3)
+     * PB0 (SDA) 配置为开漏输出 50MHz (CNF=01, MODE=11 -> 0x7)
+     * 开漏模式下无需反复切换输入/输出模式，读写均原子执行，杜绝寄存器并发冲突 */
+    GPIOB->CFGLR = (GPIOB->CFGLR & ~0x000000FFu) | 0x00000037u;
 
     SCL_H();
     SDA_H();
@@ -136,13 +138,13 @@ uint8_t I2C_WriteReg(uint8_t dev_addr, uint8_t reg_addr, uint8_t val)
 {
     Soft_I2C_Start();
     Soft_I2C_SendByte((dev_addr << 1) | 0);
-    if (Soft_I2C_WaitAck()) return 1;
+    if (Soft_I2C_WaitAck()) { Soft_I2C_Stop(); return 1; }
 
     Soft_I2C_SendByte(reg_addr);
-    if (Soft_I2C_WaitAck()) return 2;
+    if (Soft_I2C_WaitAck()) { Soft_I2C_Stop(); return 2; }
 
     Soft_I2C_SendByte(val);
-    if (Soft_I2C_WaitAck()) return 3;
+    if (Soft_I2C_WaitAck()) { Soft_I2C_Stop(); return 3; }
 
     Soft_I2C_Stop();
     return 0;
@@ -152,14 +154,14 @@ uint8_t I2C_ReadReg(uint8_t dev_addr, uint8_t reg_addr, uint8_t *val)
 {
     Soft_I2C_Start();
     Soft_I2C_SendByte((dev_addr << 1) | 0);
-    if (Soft_I2C_WaitAck()) return 1;
+    if (Soft_I2C_WaitAck()) { Soft_I2C_Stop(); return 1; }
 
     Soft_I2C_SendByte(reg_addr);
-    if (Soft_I2C_WaitAck()) return 2;
+    if (Soft_I2C_WaitAck()) { Soft_I2C_Stop(); return 2; }
 
     Soft_I2C_Start();
     Soft_I2C_SendByte((dev_addr << 1) | 1);
-    if (Soft_I2C_WaitAck()) return 3;
+    if (Soft_I2C_WaitAck()) { Soft_I2C_Stop(); return 3; }
 
     *val = Soft_I2C_RecvByte(1); /* 读单字节发送 NACK */
     Soft_I2C_Stop();
@@ -172,14 +174,14 @@ uint8_t I2C_ReadBuffer(uint8_t dev_addr, uint8_t reg_addr, uint8_t *buf, uint16_
 
     Soft_I2C_Start();
     Soft_I2C_SendByte((dev_addr << 1) | 0);
-    if (Soft_I2C_WaitAck()) return 2;
+    if (Soft_I2C_WaitAck()) { Soft_I2C_Stop(); return 2; }
 
     Soft_I2C_SendByte(reg_addr);
-    if (Soft_I2C_WaitAck()) return 3;
+    if (Soft_I2C_WaitAck()) { Soft_I2C_Stop(); return 3; }
 
     Soft_I2C_Start();
     Soft_I2C_SendByte((dev_addr << 1) | 1);
-    if (Soft_I2C_WaitAck()) return 4;
+    if (Soft_I2C_WaitAck()) { Soft_I2C_Stop(); return 4; }
 
     for (uint16_t i = 0; i < len; i++)
     {
@@ -193,15 +195,15 @@ uint8_t I2C_WriteBuffer(uint8_t dev_addr, uint8_t reg_addr, const uint8_t *buf, 
 {
     Soft_I2C_Start();
     Soft_I2C_SendByte((dev_addr << 1) | 0);
-    if (Soft_I2C_WaitAck()) return 1;
+    if (Soft_I2C_WaitAck()) { Soft_I2C_Stop(); return 1; }
 
     Soft_I2C_SendByte(reg_addr);
-    if (Soft_I2C_WaitAck()) return 2;
+    if (Soft_I2C_WaitAck()) { Soft_I2C_Stop(); return 2; }
 
     for (uint16_t i = 0; i < len; i++)
     {
         Soft_I2C_SendByte(buf[i]);
-        if (Soft_I2C_WaitAck()) return 3;
+        if (Soft_I2C_WaitAck()) { Soft_I2C_Stop(); return 3; }
     }
     Soft_I2C_Stop();
     return 0;

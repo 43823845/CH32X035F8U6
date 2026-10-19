@@ -247,7 +247,7 @@ static void USB_CDC_TriggerTx(void)
         while (s_tx_tail != s_tx_head && count < CDC_MAX_PACKET_SIZE)
         {
             s_ep3_buf[count++] = s_tx_ring[s_tx_tail];
-            s_tx_tail = (s_tx_tail + 1) % CDC_TX_RING_SIZE;
+            s_tx_tail = (s_tx_tail + 1) & (CDC_TX_RING_SIZE - 1);
         }
 
         if (count > 0)
@@ -268,11 +268,11 @@ uint32_t USB_CDC_SendBuffer(const uint8_t *buf, uint32_t len)
     uint32_t written = 0;
     for (uint32_t i = 0; i < len; i++)
     {
-        uint16_t next_head = (s_tx_head + 1) % CDC_TX_RING_SIZE;
+        uint16_t next_head = (s_tx_head + 1) & (CDC_TX_RING_SIZE - 1);
         if (next_head == s_tx_tail)
         {
             /* 环形队列满时丢弃最旧数据，确保最新调试日志不丢失且系统永不阻塞 */
-            s_tx_tail = (s_tx_tail + 1) % CDC_TX_RING_SIZE;
+            s_tx_tail = (s_tx_tail + 1) & (CDC_TX_RING_SIZE - 1);
         }
         s_tx_ring[s_tx_head] = buf[i];
         s_tx_head = next_head;
@@ -298,16 +298,14 @@ void USB_CDC_SendString(const char *str)
 
 uint32_t USB_CDC_Available(void)
 {
-    return (s_rx_head >= s_rx_tail) ? 
-           (s_rx_head - s_rx_tail) : 
-           (CDC_RX_RING_SIZE - s_rx_tail + s_rx_head);
+    return (s_rx_head - s_rx_tail) & (CDC_RX_RING_SIZE - 1);
 }
 
 int16_t USB_CDC_ReadByte(void)
 {
     if (s_rx_head == s_rx_tail) return -1;
     uint8_t ch = s_rx_ring[s_rx_tail];
-    s_rx_tail = (s_rx_tail + 1) % CDC_RX_RING_SIZE;
+    s_rx_tail = (s_rx_tail + 1) & (CDC_RX_RING_SIZE - 1);
     return ch;
 }
 
@@ -431,7 +429,7 @@ void USBFS_IRQHandler(void)
                         len = USBFSD->RX_LEN;
                         for (uint16_t i = 0; i < len; i++)
                         {
-                            uint16_t next_head = (s_rx_head + 1) % CDC_RX_RING_SIZE;
+                            uint16_t next_head = (s_rx_head + 1) & (CDC_RX_RING_SIZE - 1);
                             if (next_head != s_rx_tail)
                             {
                                 s_rx_ring[s_rx_head] = s_ep2_buf[i];

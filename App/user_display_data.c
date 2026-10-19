@@ -8,13 +8,12 @@
  *******************************************************************************/
 #include "wui_page_page_2.h"   /* Page2 生成控件 ID 与控件 API */
 #include "wui_page_page_3.h"   /* Page3 生成控件 ID */
-#include "wui_page_page_4.h"   /* Page4 生成控件 ID */
-#include "st7735.h"            /* 屏幕底层图形画线与颜色定义 */
-
-#include <stdio.h>
+#include "wui_page_page_4.h"
+#include "st7735.h"
+#include "fast_math.h"
+#include "tiny_format.h"
 #include <stdint.h>
 #include <stdbool.h>
-#include <math.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -80,7 +79,7 @@ void user_display_attitude_update(float ax, float ay, float az)
         s_fz += 0.3f * (az - s_fz);
     }
 
-    const float mag   = sqrtf(s_fx * s_fx + s_fy * s_fy + s_fz * s_fz);
+    const float mag   = fast_sqrtf(s_fx * s_fx + s_fy * s_fy + s_fz * s_fz);
     const float domin = 0.70f;
 
     if (mag < 700.0f || mag > 1400.0f)
@@ -88,9 +87,9 @@ void user_display_attitude_update(float ax, float ay, float az)
         s_orient = "NONE";
         return;
     }
-    if (fabsf(s_fz) >= domin * mag) { s_orient = (s_fz > 0.0f) ? "FLAT" : "INVERT"; return; }
-    if (fabsf(s_fy) >= domin * mag) { s_orient = (s_fy > 0.0f) ? "UPRIGHT" : "DOWN"; return; }
-    if (fabsf(s_fx) >= domin * mag) { s_orient = (s_fx > 0.0f) ? "RIGHT" : "LEFT"; return; }
+    if (fast_fabsf(s_fz) >= domin * mag) { s_orient = (s_fz > 0.0f) ? "FLAT" : "INVERT"; return; }
+    if (fast_fabsf(s_fy) >= domin * mag) { s_orient = (s_fy > 0.0f) ? "UPRIGHT" : "DOWN"; return; }
+    if (fast_fabsf(s_fx) >= domin * mag) { s_orient = (s_fx > 0.0f) ? "RIGHT" : "LEFT"; return; }
 
     s_orient = "TILT";
 }
@@ -256,17 +255,18 @@ static void buf_fill_quad(uint16_t *buf, const int16_t x[4], const int16_t y[4],
 void user_display_draw_cube(float pitch, float roll)
 {
     /* 1. 静态防抖: 微小变化 (< 0.6 度) 且上一帧有效时跳过，消除不必要的总线占用 */
-    if (s_has_prev && fabsf(pitch - s_last_pitch) < 0.6f && fabsf(roll - s_last_roll) < 0.6f)
+    if (s_has_prev && fast_fabsf(pitch - s_last_pitch) < 0.6f && fast_fabsf(roll - s_last_roll) < 0.6f)
     {
         return;
     }
 
-    /* 2. 角度转弧度 */
-    float rad_p = -pitch * (3.14159265f / 180.0f);
-    float rad_r = roll   * (3.14159265f / 180.0f);
+    /* 2. 角度转弧度并极速计算正余弦 */
+    float rad_p = -pitch * FAST_DEG_TO_RAD;
+    float rad_r = roll   * FAST_DEG_TO_RAD;
 
-    float cp = cosf(rad_p), sp = sinf(rad_p);
-    float cr = cosf(rad_r), sr = sinf(rad_r);
+    float sp, cp, sr, cr;
+    fast_sincosf(rad_p, &sp, &cp);
+    fast_sincosf(rad_r, &sr, &cr);
 
     /* 固定相机视角: 方位角 30°，俯视仰角 25° */
     const float ca = 0.86602540f; /* cos(30°) */
@@ -364,16 +364,16 @@ void user_display_draw_cube(float pitch, float roll)
 void wui_page_page_2_update_data(float pitch, float roll, float ax, float ay, float az)
 {
     /* 1. 左半屏: 文本数值更新 (控件宽度已扩充至 96px，完整呈现负号与 4 位数值) */
-    snprintf(s_pose_str, sizeof(s_pose_str), "Pose:%s", user_display_attitude_text());
+    tiny_snprintf(s_pose_str, sizeof(s_pose_str), "Pose:%s", user_display_attitude_text());
     wui_widget_simplestring_set_str(WUI_P2_WIDGET_POSE, s_pose_str);
 
-    snprintf(s_acc_x_str, sizeof(s_acc_x_str), "X:%ld", (long)(int32_t)ax);
+    tiny_snprintf(s_acc_x_str, sizeof(s_acc_x_str), "X:%ld", (long)(int32_t)ax);
     wui_widget_simplestring_set_str(WUI_P2_WIDGET_ACC_X, s_acc_x_str);
 
-    snprintf(s_acc_y_str, sizeof(s_acc_y_str), "Y:%ld", (long)(int32_t)ay);
+    tiny_snprintf(s_acc_y_str, sizeof(s_acc_y_str), "Y:%ld", (long)(int32_t)ay);
     wui_widget_simplestring_set_str(WUI_P2_WIDGET_ACC_Y, s_acc_y_str);
 
-    snprintf(s_acc_z_str, sizeof(s_acc_z_str), "Z:%ld", (long)(int32_t)az);
+    tiny_snprintf(s_acc_z_str, sizeof(s_acc_z_str), "Z:%ld", (long)(int32_t)az);
     wui_widget_simplestring_set_str(WUI_P2_WIDGET_ACC_Z, s_acc_z_str);
 
     /* 2. 右侧垂直进度条 (component_005): 实时指示俯仰角度 (Pitch: -90° ~ +90° 线性映射为 0 ~ 100%) */
@@ -393,21 +393,21 @@ void wui_page_page_2_update_data(float pitch, float roll, float ax, float ay, fl
 void wui_page_page_3_update_data(uint32_t tap_single, uint32_t tap_double, uint32_t ff_count, bool ff_recent)
 {
     /* 1. 动作识别数据: 单击 / 双击累计次数 (例如 S:1 D:0) */
-    snprintf(s_p3_tap_str, sizeof(s_p3_tap_str), "S:%lu D:%lu",
-             (unsigned long)tap_single, (unsigned long)tap_double);
+    tiny_snprintf(s_p3_tap_str, sizeof(s_p3_tap_str), "S:%lu D:%lu",
+                  (unsigned long)tap_single, (unsigned long)tap_double);
     wui_widget_simplestring_set_str(WUI_P3_WIDGET_TAP_VAL, s_p3_tap_str);
 
     /* 2. 自由落体数据: 若近 2s 内发生跌落变红显示 FALL!, 正常显示 OK (附累计次数) */
     if (ff_recent)
     {
-        snprintf(s_p3_ff_str, sizeof(s_p3_ff_str), "FALL!(%lu)", (unsigned long)ff_count);
+        tiny_snprintf(s_p3_ff_str, sizeof(s_p3_ff_str), "FALL!(%lu)", (unsigned long)ff_count);
         wui_widget_simplestring_set_color(WUI_P3_WIDGET_FF_VAL,
                                           RGB888_TO_RGB565(255, 80, 80),
                                           RGB888_TO_RGB565(0, 0, 0));
     }
     else
     {
-        snprintf(s_p3_ff_str, sizeof(s_p3_ff_str), "OK (%lu)", (unsigned long)ff_count);
+        tiny_snprintf(s_p3_ff_str, sizeof(s_p3_ff_str), "OK (%lu)", (unsigned long)ff_count);
         wui_widget_simplestring_set_color(WUI_P3_WIDGET_FF_VAL,
                                           RGB888_TO_RGB565(129, 199, 132),
                                           RGB888_TO_RGB565(0, 0, 0));
@@ -426,10 +426,10 @@ void wui_page_page_4_update_data(float lux, uint8_t bl_percent)
     if (lux_d < 0) lux_d = -lux_d;
 
     /* 1. component_001 (亮度/光强): 显示高精度 Lux 值 (支持 0~157,285 Lux) */
-    snprintf(s_lux_str, sizeof(s_lux_str), "Lux:%ld.%ld", (long)lux_i, (long)lux_d);
+    tiny_snprintf(s_lux_str, sizeof(s_lux_str), "Lux:%ld.%ld", (long)lux_i, (long)lux_d);
     wui_widget_simplestring_set_str(WUI_P4_WIDGET_LUX, s_lux_str);
 
     /* 2. component_002 (波长与背光): LTR-308 555nm (VIS) 与当前背光占空比 */
-    snprintf(s_lumen_str, sizeof(s_lumen_str), "555nm BL:%d%%", (int)bl_percent);
+    tiny_snprintf(s_lumen_str, sizeof(s_lumen_str), "555nm BL:%d%%", (int)bl_percent);
     wui_widget_simplestring_set_str(WUI_P4_WIDGET_LUMEN, s_lumen_str);
 }
